@@ -43,33 +43,33 @@ See `azure-pipelines.yml` for complete examples covering all providers and use c
 
 ## Task Inputs
 
-| Input | Type | Description |
-|---|---|---|
-| `prompt` | multiLine | Inline prompt (mutually exclusive with `prompt_file`) |
-| `prompt_file` | filePath | Path to a prompt file (mutually exclusive with `prompt`) |
-| `allowed_tools` | string | Comma-separated list of allowed tools |
-| `disallowed_tools` | string | Comma-separated list of disallowed tools |
-| `max_turns` | string | Maximum conversation turns |
-| `mcp_config` | string | Path to an MCP config JSON file |
-| `system_prompt` | multiLine | Override the system prompt |
-| `append_system_prompt` | multiLine | Append to the system prompt |
-| `model` | string | Model identifier (provider-specific format) |
-| `fallback_model` | string | Fallback model when the primary is unavailable |
-| `claude_env` | multiLine | Custom environment variables (`KEY: VALUE` per line) |
-| `timeout_minutes` | string | Execution timeout in minutes (default: 10) |
-| `anthropic_api_key` | string | Anthropic API key |
-| `claude_code_oauth_token` | string | Claude Code OAuth token |
-| `use_bedrock` | boolean | Use AWS Bedrock |
-| `use_vertex` | boolean | Use Google Vertex AI |
-| `aws_region` | string | AWS region for Bedrock |
-| `gcp_project_id` | string | GCP project ID for Vertex AI |
-| `gcp_region` | string | GCP region for Vertex AI |
+| Input                     | Type      | Description                                              |
+| ------------------------- | --------- | -------------------------------------------------------- |
+| `prompt`                  | multiLine | Inline prompt (mutually exclusive with `prompt_file`)    |
+| `prompt_file`             | filePath  | Path to a prompt file (mutually exclusive with `prompt`) |
+| `allowed_tools`           | string    | Comma-separated list of allowed tools                    |
+| `disallowed_tools`        | string    | Comma-separated list of disallowed tools                 |
+| `max_turns`               | string    | Maximum conversation turns                               |
+| `mcp_config`              | string    | Path to an MCP config JSON file                          |
+| `system_prompt`           | multiLine | Override the system prompt                               |
+| `append_system_prompt`    | multiLine | Append to the system prompt                              |
+| `model`                   | string    | Model identifier (provider-specific format)              |
+| `fallback_model`          | string    | Fallback model when the primary is unavailable           |
+| `claude_env`              | multiLine | Custom environment variables (`KEY: VALUE` per line)     |
+| `timeout_minutes`         | string    | Execution timeout in minutes (default: 10)               |
+| `anthropic_api_key`       | string    | Anthropic API key                                        |
+| `claude_code_oauth_token` | string    | Claude Code OAuth token                                  |
+| `use_bedrock`             | boolean   | Use AWS Bedrock                                          |
+| `use_vertex`              | boolean   | Use Google Vertex AI                                     |
+| `aws_region`              | string    | AWS region for Bedrock                                   |
+| `gcp_project_id`          | string    | GCP project ID for Vertex AI                             |
+| `gcp_region`              | string    | GCP region for Vertex AI                                 |
 
 ## Task Outputs
 
-| Output | Description |
-|---|---|
-| `conclusion` | `success` or `failure` |
+| Output           | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `conclusion`     | `success` or `failure`                        |
 | `execution_file` | Path to the NDJSON execution log (JSON array) |
 
 ## Authentication
