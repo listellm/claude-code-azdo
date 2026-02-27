@@ -1,3 +1,9 @@
+## [1.0.13](https://github.com/listellm/claude-code-azdo/compare/v1.0.12...v1.0.13) (2026-02-27)
+
+### Bug Fixes
+
+- optional CLI install and API key pipeline var ([#13](https://github.com/listellm/claude-code-azdo/issues/13)) ([1e413ea](https://github.com/listellm/claude-code-azdo/commit/1e413ea93980311de054a4cfc9b205a46049c7f2))
+
 ## [1.0.12](https://github.com/listellm/claude-code-azdo/compare/v1.0.11...v1.0.12) (2026-02-27)
 
 ### Bug Fixes
