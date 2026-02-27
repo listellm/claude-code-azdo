@@ -9,7 +9,10 @@ export function validateEnvironmentVariablesAzure(): void {
   const errors = validateConfig({
     useBedrock: tl.getBoolInput("use_bedrock", false),
     useVertex: tl.getBoolInput("use_vertex", false),
-    anthropicApiKey: tl.getInput("anthropic_api_key", false) ?? undefined,
+    anthropicApiKey:
+      tl.getInput("anthropic_api_key", false) ??
+      tl.getVariable("ANTHROPIC_API_KEY") ??
+      undefined,
     claudeCodeOAuthToken:
       tl.getInput("claude_code_oauth_token", false) ?? undefined,
     awsRegion: tl.getInput("aws_region", false) ?? undefined,
