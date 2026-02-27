@@ -1,3 +1,9 @@
+## [1.0.9](https://github.com/listellm/claude-code-azdo/compare/v1.0.8...v1.0.9) (2026-02-27)
+
+### Bug Fixes
+
+- add renovate config and remove stale publisher docs ([#9](https://github.com/listellm/claude-code-azdo/issues/9)) ([b7913b5](https://github.com/listellm/claude-code-azdo/commit/b7913b5ef8d9181acd9857448eb201cc213b9d57))
+
 ## [1.0.2](https://github.com/listellm/claude-code-azdo/compare/v1.0.1...v1.0.2) (2026-02-27)
 
 ### Bug Fixes
