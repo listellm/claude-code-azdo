@@ -1,14 +1,13 @@
-// GitHub Actions core removed - Azure DevOps extension only
 import { exec } from "child_process";
 import { promisify } from "util";
 import { unlink, writeFile, stat } from "fs/promises";
 import { createWriteStream } from "fs";
 import { spawn } from "child_process";
+import * as os from "os";
+import * as path from "path";
 
 const execAsync = promisify(exec);
 
-const PIPE_PATH = `/tmp/claude_prompt_pipe`;
-const EXECUTION_FILE = `/tmp/claude-execution-output.json`;
 const BASE_ARGS = ["-p", "--verbose", "--output-format", "stream-json"];
 
 export type ClaudeOptions = {
@@ -29,25 +28,39 @@ type PreparedConfig = {
   env: Record<string, string>;
 };
 
-function parseCustomEnvVars(claudeEnv?: string): Record<string, string> {
+export type RunResult = {
+  conclusion: "success" | "failure";
+  executionFile: string | null;
+  exitCode: number;
+};
+
+/** Options passed by the runtime environment (not user-facing task inputs). */
+export type RuntimeOptions = {
+  /** Additional env vars merged on top of claudeEnv — used for provider credentials. */
+  extraEnv?: Record<string, string>;
+  /**
+   * Override the temp directory used for the named pipe and execution output file.
+   * Defaults to os.tmpdir(). Azure adapter passes Agent.TempDirectory.
+   */
+  tmpDir?: string;
+};
+
+export function parseCustomEnvVars(claudeEnv?: string): Record<string, string> {
   if (!claudeEnv || claudeEnv.trim() === "") {
     return {};
   }
 
   const customEnv: Record<string, string> = {};
 
-  // Split by lines and parse each line as KEY: VALUE
-  const lines = claudeEnv.split("\n");
-
-  for (const line of lines) {
+  for (const line of claudeEnv.split("\n")) {
     const trimmedLine = line.trim();
     if (trimmedLine === "" || trimmedLine.startsWith("#")) {
-      continue; // Skip empty lines and comments
+      continue;
     }
 
     const colonIndex = trimmedLine.indexOf(":");
     if (colonIndex === -1) {
-      continue; // Skip lines without colons
+      continue;
     }
 
     const key = trimmedLine.substring(0, colonIndex).trim();
@@ -103,7 +116,6 @@ export function prepareRunConfig(
     }
   }
 
-  // Parse custom environment variables
   const customEnv = parseCustomEnvVars(options.claudeEnv);
 
   return {
@@ -113,44 +125,45 @@ export function prepareRunConfig(
   };
 }
 
-export async function runClaude(promptPath: string, options: ClaudeOptions) {
+export async function runClaude(
+  promptPath: string,
+  options: ClaudeOptions,
+  runtime: RuntimeOptions = {},
+): Promise<RunResult> {
   const config = prepareRunConfig(promptPath, options);
+  const tmpDir = runtime.tmpDir ?? os.tmpdir();
+  const pipePath = path.join(tmpDir, "claude_prompt_pipe");
+  const executionFile = path.join(tmpDir, "claude-execution-output.json");
 
-  // Create a named pipe
   try {
-    await unlink(PIPE_PATH);
-  } catch (e) {
-    // Ignore if file doesn't exist
+    await unlink(pipePath);
+  } catch {
+    // Expected when pipe does not yet exist
   }
 
-  // Create the named pipe
-  await execAsync(`mkfifo "${PIPE_PATH}"`);
+  await execAsync(`mkfifo "${pipePath}"`);
 
-  // Log prompt file size
   let promptSize = "unknown";
   try {
     const stats = await stat(config.promptPath);
     promptSize = stats.size.toString();
-  } catch (e) {
-    // Ignore error
+  } catch {
+    // Non-fatal — size is only for logging
   }
 
   console.log(`Prompt file size: ${promptSize} bytes`);
 
-  // Log custom environment variables if any
   if (Object.keys(config.env).length > 0) {
     const envKeys = Object.keys(config.env).join(", ");
     console.log(`Custom environment variables: ${envKeys}`);
   }
 
-  // Output to console
   console.log(`Running Claude with prompt from file: ${config.promptPath}`);
 
-  // Start sending prompt to pipe in background
   const catProcess = spawn("cat", [config.promptPath], {
     stdio: ["ignore", "pipe", "inherit"],
   });
-  const pipeStream = createWriteStream(PIPE_PATH);
+  const pipeStream = createWriteStream(pipePath);
   catProcess.stdout.pipe(pipeStream);
 
   catProcess.on("error", (error) => {
@@ -163,35 +176,31 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
     env: {
       ...process.env,
       ...config.env,
+      ...(runtime.extraEnv ?? {}),
     },
   });
 
-  // Handle Claude process errors
   claudeProcess.on("error", (error) => {
     console.error("Error spawning Claude process:", error);
     pipeStream.destroy();
   });
 
-  // Capture output for parsing execution metrics
   let output = "";
-  claudeProcess.stdout.on("data", (data) => {
+  claudeProcess.stdout.on("data", (data: Buffer) => {
     const text = data.toString();
 
-    // Try to parse as JSON and pretty print if it's on a single line
     const lines = text.split("\n");
     lines.forEach((line: string, index: number) => {
       if (line.trim() === "") return;
 
       try {
-        // Check if this line is a JSON object
-        const parsed = JSON.parse(line);
+        const parsed = JSON.parse(line) as unknown;
         const prettyJson = JSON.stringify(parsed, null, 2);
         process.stdout.write(prettyJson);
         if (index < lines.length - 1 || text.endsWith("\n")) {
           process.stdout.write("\n");
         }
-      } catch (e) {
-        // Not a JSON object, print as is
+      } catch {
         process.stdout.write(line);
         if (index < lines.length - 1 || text.endsWith("\n")) {
           process.stdout.write("\n");
@@ -202,46 +211,41 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
     output += text;
   });
 
-  // Handle stdout errors
   claudeProcess.stdout.on("error", (error) => {
     console.error("Error reading Claude stdout:", error);
   });
 
-  // Pipe from named pipe to Claude
-  const pipeProcess = spawn("cat", [PIPE_PATH]);
+  const pipeProcess = spawn("cat", [pipePath]);
   pipeProcess.stdout.pipe(claudeProcess.stdin);
 
-  // Handle pipe process errors
   pipeProcess.on("error", (error) => {
     console.error("Error reading from named pipe:", error);
     claudeProcess.kill("SIGTERM");
   });
 
-  // Wait for Claude to finish with timeout
-  let timeoutMs = 10 * 60 * 1000; // Default 10 minutes
+  let timeoutMs = 10 * 60 * 1000;
   if (options.timeoutMinutes) {
     timeoutMs = parseInt(options.timeoutMinutes, 10) * 60 * 1000;
   }
+
   const exitCode = await new Promise<number>((resolve) => {
     let resolved = false;
 
-    // Set a timeout for the process
     const timeoutId = setTimeout(() => {
       if (!resolved) {
         console.error(
           `Claude process timed out after ${timeoutMs / 1000} seconds`,
         );
         claudeProcess.kill("SIGTERM");
-        // Give it 5 seconds to terminate gracefully, then force kill
         setTimeout(() => {
           try {
             claudeProcess.kill("SIGKILL");
-          } catch (e) {
+          } catch {
             // Process may already be dead
           }
         }, 5000);
         resolved = true;
-        resolve(124); // Standard timeout exit code
+        resolve(124);
       }
     }, timeoutMs);
 
@@ -249,7 +253,7 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
       if (!resolved) {
         clearTimeout(timeoutId);
         resolved = true;
-        resolve(code || 0);
+        resolve(code ?? 0);
       }
     });
 
@@ -263,57 +267,62 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
     });
   });
 
-  // Clean up processes
   try {
     catProcess.kill("SIGTERM");
-  } catch (e) {
+  } catch {
     // Process may already be dead
   }
   try {
     pipeProcess.kill("SIGTERM");
-  } catch (e) {
+  } catch {
     // Process may already be dead
   }
 
-  // Clean up pipe file
   try {
-    await unlink(PIPE_PATH);
-  } catch (e) {
+    await unlink(pipePath);
+  } catch {
     // Ignore errors during cleanup
   }
 
-  // Set conclusion based on exit code
-  if (exitCode === 0) {
-    // Try to process the output and save execution metrics
-    try {
-      await writeFile("output.txt", output);
+  const savedExecutionFile = await saveExecutionOutput(output, executionFile);
 
-      // Process output.txt into JSON and save to execution file
-      const { stdout: jsonOutput } = await execAsync("jq -s '.' output.txt");
-      await writeFile(EXECUTION_FILE, jsonOutput);
+  const conclusion: "success" | "failure" =
+    exitCode === 0 ? "success" : "failure";
 
-      console.log(`Log saved to ${EXECUTION_FILE}`);
-    } catch (e) {
-      console.warn(`Failed to process output for execution metrics: ${e}`);
-    }
-
+  if (conclusion === "success") {
     console.log("Claude execution completed successfully");
-    console.log(`Execution file: ${EXECUTION_FILE}`);
+    if (savedExecutionFile) {
+      console.log(`Execution file: ${savedExecutionFile}`);
+    }
   } else {
     console.error("Claude execution failed");
+  }
 
-    // Still try to save execution file if we have output
-    if (output) {
+  return { conclusion, executionFile: savedExecutionFile, exitCode };
+}
+
+async function saveExecutionOutput(
+  output: string,
+  executionFile: string,
+): Promise<string | null> {
+  if (!output.trim()) {
+    return null;
+  }
+
+  try {
+    const entries: unknown[] = [];
+    for (const line of output.trim().split("\n")) {
+      if (!line.trim()) continue;
       try {
-        await writeFile("output.txt", output);
-        const { stdout: jsonOutput } = await execAsync("jq -s '.' output.txt");
-        await writeFile(EXECUTION_FILE, jsonOutput);
-        console.log(`Execution file saved: ${EXECUTION_FILE}`);
-      } catch (e) {
-        // Ignore errors when processing output during failure
+        entries.push(JSON.parse(line) as unknown);
+      } catch {
+        // Skip non-JSON lines (e.g. informational log output)
       }
     }
-
-    process.exit(exitCode);
+    await writeFile(executionFile, JSON.stringify(entries, null, 2));
+    return executionFile;
+  } catch (error: unknown) {
+    console.warn(`Failed to save execution output: ${error}`);
+    return null;
   }
 }

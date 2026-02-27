@@ -27,8 +27,8 @@ export async function setupClaudeCodeSettings() {
     } else {
       console.log(`No existing settings file found, creating new one`);
     }
-  } catch (e) {
-    console.log(`Error reading settings file, creating new one`);
+  } catch (error: unknown) {
+    console.warn(`Error reading existing settings (creating new): ${error}`);
   }
 
   settings.enableAllProjectMcpServers = true;

@@ -1,10 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "node",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022"],
     "types": ["node"],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -19,7 +19,6 @@
     "isolatedModules": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "noImplicitAny": false,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "noImplicitOverride": true,
@@ -29,8 +28,10 @@
   "include": [
     "src/azure-*.ts",
     "src/prepare-prompt.ts",
+    "src/run-claude.ts",
     "src/setup-claude-code-settings.ts",
-    "src/validate-env.ts"
+    "src/validate-env.ts",
+    "src/validate-env-core.ts"
   ],
   "exclude": ["node_modules", "dist", "test", "**/*.test.ts", "**/*.spec.ts"]
 }

@@ -1,63 +1,117 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Common Commands
 
-### Development Commands
+### Development
 
-- Build/Type check: `pnpm run typecheck`
-- Format code: `pnpm run format`
-- Check formatting: `pnpm run format:check`
-- Run tests: `pnpm test`
-- Install dependencies: `pnpm install`
+```bash
+pnpm install             # Install dependencies
+pnpm run typecheck       # Type-check only (uses tsconfig.json, no emit)
+pnpm run format          # Fix formatting
+pnpm run format:check    # Check formatting without fixing
+pnpm test                # Run all tests (vitest)
+pnpm test:watch          # Watch mode
+pnpm test:coverage       # Coverage report
+pnpm test test/prepare-prompt.test.ts  # Run a single test file
+```
 
-### Azure DevOps Task Testing
+### Build
 
-- Test Azure DevOps task locally: `node test-azure-task.js`
-- Test specific file: `pnpm test test/prepare-prompt.test.ts`
+```bash
+pnpm run dev             # Fast build + validate (skips tests/lint) — use during iteration
+pnpm run build           # Full build: clean → lint → typecheck → test → compile → validate
+pnpm run build:fast      # Build without tests/lint
+pnpm run build:azure     # TypeScript compile only (tsconfig.build.json → dist/)
+pnpm run validate:build  # Validate dist output after build
+```
 
-## Architecture Overview
+The build compiles TypeScript via `tsconfig.build.json` → `dist/`, then installs `azure-pipelines-task-lib` as a production dependency inside `dist/`. The `task.json` is also copied to `dist/`. The `azure-pipeline.js` entry point in `dist/` is what Azure DevOps executes (`Node22_1` runtime).
 
-This is an Azure DevOps extension that allows running Claude Code within Azure DevOps pipelines. The extension consists of:
+### Local task testing
 
-### Core Components
+```bash
+ANTHROPIC_API_KEY=... node test-azure-task.js    # Run the Azure task locally
+node validate-azure-task.js                       # Validate task configuration
+```
 
-1. **Task Definition** (`task.json`): Defines inputs, outputs, and the Azure DevOps task configuration
-2. **Azure Pipeline Entry** (`src/azure-pipeline.ts`): Main entry point for Azure DevOps task execution
-3. **Prompt Preparation** (`src/prepare-prompt.ts`): Handles prompt input validation and preparation
-4. **Claude Execution** (`src/azure-run-claude.ts`): Manages Claude Code execution with Azure DevOps integration
+### Versioning
 
-### Key Design Patterns
+Versions must stay consistent across **three** files: `package.json`, `vss-extension.json`, and `task.json`. The build script enforces this. Use the bump script to update all at once:
 
-- Uses Bun runtime for development and execution
-- Named pipes for IPC between prompt input and Claude process
-- JSON streaming output format for execution logs
-- Azure DevOps task pattern with proper input/output handling
-- Provider-agnostic design supporting Anthropic API, AWS Bedrock, and Google Vertex AI
+```bash
+./scripts/bump-version.sh patch --auto-azure     # Bump patch version across all three files
+./scripts/bump-version.sh minor --auto-azure --dry-run
+```
 
-## Provider Authentication
+### Publishing
 
-1. **Anthropic API** (default): Requires API key via `anthropic_api_key` input
-2. **AWS Bedrock**: Uses AWS credentials from Azure DevOps variables
-3. **Google Vertex AI**: Uses GCP service account credentials from Azure DevOps variables
+```bash
+pnpm run create:vsix        # Build + package as .vsix
+pnpm run publish:extension  # Publish to Azure DevOps Marketplace
+pnpm run publish:dry-run    # Dry-run publish
+```
 
-## Testing Strategy
+## Architecture
 
-### Local Testing
+This is an Azure DevOps extension that runs Claude Code inside Azure pipelines. The task definition is in `task.json`; the extension manifest is in `vss-extension.json`.
 
-- Use `test-azure-task.js` script to test Azure DevOps task locally
-- Requires `ANTHROPIC_API_KEY` environment variable
-- Tests task input validation and Claude execution
+### Execution flow
 
-### Test Structure
+```
+azure-pipeline.ts        ← AzDo task entry point (Node22_1)
+  → azure-setup.ts       ← Sets RUNNER_TEMP/CLAUDE_WORKING_DIR; installs claude CLI if absent
+  → setup-claude-code-settings.ts ← Merges enableAllProjectMcpServers into ~/.claude/settings.json
+  → azure-validate-env.ts← Reads task inputs, delegates to validate-env-core.ts
+  → prepare-prompt.ts    ← Validates/writes prompt to temp file (os.tmpdir()-based paths)
+  → azure-run-claude.ts  ← Thin AzDo adapter: builds extraEnv from task inputs, calls runClaude()
+      → run-claude.ts    ← Shared execution core: spawns claude, streams output, returns RunResult
+```
 
-- Unit tests for configuration logic
-- Integration tests for prompt preparation
-- Azure DevOps pipeline tests in `azure-pipelines.yml`
+### Module structure
 
-## Important Technical Details
+`src/run-claude.ts` is the **shared execution core**. It accepts all configuration as explicit parameters (`ClaudeOptions` for user-facing options, `RuntimeOptions` for `extraEnv` and `tmpDir`). No Azure DevOps imports.
 
-- Uses `mkfifo` to create named pipes for prompt input
-- Outputs execution logs as JSON to `${Agent.TempDirectory}/claude-execution-output.json`
-- Timeout enforcement via process management
-- Strict TypeScript configuration with Bun-specific settings
-- Azure DevOps task library integration for proper variable handling
+`src/azure-run-claude.ts` is a **thin AzDo adapter**: reads provider credentials from `tl.*`, builds an `extraEnv` record, calls `runClaude()`, then translates `RunResult` into `tl.setVariable` / `tl.setResult`.
+
+`src/validate-env-core.ts` contains **shared validation logic** for all three providers. Both `validate-env.ts` (reads `process.env`) and `azure-validate-env.ts` (reads `tl.*`) build a `ValidationConfig` object and delegate to `validateConfig()`.
+
+### Prompt delivery via named pipe
+
+The claude process reads stdin from a named FIFO (`claude_prompt_pipe`). Three processes are co-ordinated:
+
+1. `cat <prompt-file>` → pipe write end
+2. `cat <pipe>` → claude stdin
+3. `claude -p --verbose --output-format stream-json` → stdout
+
+This avoids passing the prompt as a command-line argument.
+
+### Output variables
+
+The task sets two AzDo output variables:
+
+- `conclusion` — `"success"` or `"failure"`
+- `execution_file` — path to `claude-execution-output.json` (NDJSON output aggregated into a JSON array using pure Node.js — no `jq` dependency)
+
+### Provider authentication
+
+Authentication is selected by task inputs:
+
+| Provider            | Inputs required                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| Anthropic (default) | `anthropic_api_key` OR `claude_code_oauth_token`                                                  |
+| AWS Bedrock         | `use_bedrock: true`, `aws_region`, pipeline vars `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`    |
+| Google Vertex AI    | `use_vertex: true`, `gcp_project_id`, `gcp_region`, pipeline var `GOOGLE_APPLICATION_CREDENTIALS` |
+
+`use_bedrock` and `use_vertex` are mutually exclusive.
+
+### `claude_env` format
+
+Custom environment variables are passed as `KEY: VALUE` per line (colon-separated, **not** `KEY=VALUE`). Empty lines and `#` comment lines are ignored.
+
+### TypeScript configuration
+
+`tsconfig.json` — type-checking only (`noEmit: true`), Bun bundler mode, used by `pnpm run typecheck` and editors.
+
+`tsconfig.build.json` — emits CommonJS to `dist/`, used by the build pipeline.

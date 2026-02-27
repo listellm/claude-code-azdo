@@ -311,13 +311,11 @@ Use provider-specific model names based on your chosen provider:
 ### Common Issues
 
 1. **Authentication Errors**
-
    - Ensure API keys are configured as secret variables
    - Check that service connections are properly configured
    - Verify provider-specific credentials
 
 2. **Timeout Issues**
-
    - Increase `timeout_minutes` for complex tasks
    - Use `max_turns` to limit conversation length
    - Consider breaking complex prompts into smaller tasks
@@ -347,7 +345,6 @@ Enable verbose logging by adding:
 To securely use your Anthropic API key:
 
 1. Add your API key as a secret variable:
-
    - Go to your pipeline's "Variables" section
    - Click "New variable"
    - Name it `ANTHROPIC_API_KEY`

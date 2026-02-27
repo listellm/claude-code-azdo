@@ -1,5 +1,7 @@
 import { existsSync, statSync } from "fs";
 import { mkdir, writeFile } from "fs/promises";
+import * as os from "os";
+import * as path from "path";
 
 export type PreparePromptInput = {
   prompt: string;
@@ -52,7 +54,7 @@ async function validateAndPreparePrompt(
     throw new Error("Prompt is empty. Please provide a non-empty prompt.");
   }
 
-  const inlinePath = "/tmp/claude-azure-task/prompt.txt";
+  const inlinePath = path.join(os.tmpdir(), "claude-azure-task", "prompt.txt");
   return {
     type: "inline",
     path: inlinePath,
@@ -63,8 +65,7 @@ async function createTemporaryPromptFile(
   prompt: string,
   promptPath: string,
 ): Promise<void> {
-  // Create the directory path
-  const dirPath = promptPath.substring(0, promptPath.lastIndexOf("/"));
+  const dirPath = path.dirname(promptPath);
   await mkdir(dirPath, { recursive: true });
   await writeFile(promptPath, prompt);
 }

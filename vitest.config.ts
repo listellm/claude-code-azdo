@@ -11,7 +11,6 @@ export default defineConfig({
 
     // Coverage configuration
     coverage: {
-      enabled: true, // Enable coverage reporting
       provider: "v8",
       reporter: ["text", "json", "html"],
       reportsDirectory: "./coverage",
@@ -25,13 +24,12 @@ export default defineConfig({
         "vss-extension.json",
         "task.json",
       ],
-      // Disable thresholds for now - can be enabled later as more tests are added
-      // thresholds: {
-      //   lines: 70,
-      //   functions: 70,
-      //   branches: 70,
-      //   statements: 70
-      // }
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        branches: 70,
+        statements: 70,
+      },
     },
 
     // Test execution settings
@@ -48,18 +46,12 @@ export default defineConfig({
     watch: false, // Default to not watching, can be overridden with --watch
 
     // Reporter configuration
-    reporter: process.env.CI ? "basic" : "verbose",
+    reporter: process.env.CI ? "default" : "verbose",
 
     // Retry configuration
     retry: 0,
 
-    // Parallel execution
-    pool: "forks", // Use forks for better isolation
-    poolOptions: {
-      forks: {
-        singleFork: false,
-      },
-    },
+    pool: "forks",
 
     // Setup files
     setupFiles: [],
@@ -80,9 +72,8 @@ export default defineConfig({
     },
   },
 
-  // Vite configuration for test builds
   esbuild: {
-    target: "node18", // Match the Node.js version requirement
+    target: "node22",
   },
 
   // Resolve configuration
