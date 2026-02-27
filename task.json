@@ -159,6 +159,14 @@
       "required": false,
       "defaultValue": false,
       "helpMarkDown": "Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)"
+    },
+    {
+      "name": "install_claude_cli",
+      "type": "boolean",
+      "label": "Install Claude CLI",
+      "required": false,
+      "defaultValue": true,
+      "helpMarkDown": "Install Claude Code CLI if not already present. Set to false when the agent image already has the CLI installed."
     }
   ],
   "outputVariables": [

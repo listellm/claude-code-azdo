@@ -16,7 +16,10 @@ export async function runClaudeAzure(
   const extraEnv: Record<string, string> = {
     CLAUDE_CODE_AZURE_TASK: "1",
     ANTHROPIC_MODEL: tl.getInput("model", false) ?? "",
-    ANTHROPIC_API_KEY: tl.getInput("anthropic_api_key", false) ?? "",
+    ANTHROPIC_API_KEY:
+      tl.getInput("anthropic_api_key", false) ??
+      tl.getVariable("ANTHROPIC_API_KEY") ??
+      "",
     CLAUDE_CODE_OAUTH_TOKEN:
       tl.getInput("claude_code_oauth_token", false) ?? "",
     CLAUDE_CODE_USE_BEDROCK: tl.getBoolInput("use_bedrock", false) ? "1" : "",

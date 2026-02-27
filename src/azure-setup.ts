@@ -21,16 +21,21 @@ export async function setupAzureEnvironment(): Promise<void> {
   console.log(`Azure Agent Temp Directory: ${agentTempDirectory}`);
   console.log(`Azure Agent Build Directory: ${agentBuildDirectory}`);
 
-  process.env.PATH = `${NPM_GLOBAL_BIN}${path.delimiter}${process.env.PATH}`;
+  const installCli = tl.getBoolInput("install_claude_cli", false);
 
-  try {
-    await execAsync("claude --version");
-    console.log("Claude Code is already installed");
-  } catch {
-    console.log("Installing Claude Code...");
-    await execAsync(
-      `npm install -g --prefix ${NPM_GLOBAL_PREFIX} @anthropic-ai/claude-code@2.1.62`,
-    );
-    console.log("Claude Code installed successfully");
+  if (installCli) {
+    process.env.PATH = `${NPM_GLOBAL_BIN}${path.delimiter}${process.env.PATH}`;
+    try {
+      await execAsync("claude --version");
+      console.log("Claude Code is already installed");
+    } catch {
+      console.log("Installing Claude Code...");
+      await execAsync(
+        `npm install -g --prefix ${NPM_GLOBAL_PREFIX} @anthropic-ai/claude-code@2.1.62`,
+      );
+      console.log("Claude Code installed successfully");
+    }
+  } else {
+    console.log("Skipping Claude Code CLI install (install_claude_cli=false)");
   }
 }
