@@ -1,3 +1,9 @@
+## [1.0.12](https://github.com/listellm/claude-code-azdo/compare/v1.0.11...v1.0.12) (2026-02-27)
+
+### Bug Fixes
+
+- install claude CLI to user-local npm prefix ([#12](https://github.com/listellm/claude-code-azdo/issues/12)) ([49dc371](https://github.com/listellm/claude-code-azdo/commit/49dc371fc1b882af4789c945768ab11e01185f9f))
+
 ## [1.0.11](https://github.com/listellm/claude-code-azdo/compare/v1.0.10...v1.0.11) (2026-02-27)
 
 ### Bug Fixes
