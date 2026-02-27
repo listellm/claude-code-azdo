@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/listellm/claude-code-azdo/compare/v1.1.0...v1.2.0) (2026-02-27)
+
+### Features
+
+- reviewer type checkboxes for Terraform & YAML ([#15](https://github.com/listellm/claude-code-azdo/issues/15)) ([5afcd1d](https://github.com/listellm/claude-code-azdo/commit/5afcd1d670361ed769d99d54d22461659ae5dc8a))
+
 ## [1.1.0](https://github.com/listellm/claude-code-azdo/compare/v1.0.13...v1.1.0) (2026-02-27)
 
 ### Features
