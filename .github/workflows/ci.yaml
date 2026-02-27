@@ -90,6 +90,19 @@ jobs:
         run: pnpm install
 
       - name: Release
-        run: npx semantic-release
+        id: release
+        run: |
+          BEFORE=$(git tag --sort=-v:refname | grep -E '^v[0-9]' | head -1 || echo "")
+          npx semantic-release
+          AFTER=$(git tag --sort=-v:refname | grep -E '^v[0-9]' | head -1 || echo "")
+          if [ -n "$AFTER" ] && [ "$BEFORE" != "$AFTER" ]; then
+            echo "new_version=${AFTER#v}" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger publish
+        if: steps.release.outputs.new_version != ''
+        run: gh workflow run publish-azure-extension.yaml --field version=${{ steps.release.outputs.new_version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
