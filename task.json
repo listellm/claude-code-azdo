@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
-  "id": "c6c9905c-dc54-462c-820c-c7e0cf8f824d",
+  "id": "912f59fc-c978-48da-8aeb-bc3b96ebc76d",
   "name": "ClaudeCodeBaseTask",
   "friendlyName": "Claude Code Base Task",
   "description": "Run Claude Code in Azure DevOps pipelines",
