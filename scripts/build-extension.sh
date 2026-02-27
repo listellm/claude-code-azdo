@@ -117,7 +117,7 @@ log_success "Dependencies installed"
 # Run linting and formatting checks
 if [ "$SKIP_LINT" = false ]; then
     log_step "Running linting and formatting checks..."
-    
+
     # Check formatting
     if pnpm run format:check; then
         log_success "Code formatting is correct"
@@ -126,7 +126,7 @@ if [ "$SKIP_LINT" = false ]; then
         log_info "Run 'pnpm run format' to fix formatting issues"
         exit 1
     fi
-    
+
     # Type checking
     if pnpm run typecheck; then
         log_success "TypeScript type checking passed"

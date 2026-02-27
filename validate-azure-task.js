@@ -327,7 +327,7 @@ async function main() {
   console.log("- dist/task.json (task definition)");
   console.log("- dist/*.js (supporting modules)");
   console.log("- README-azure.md (documentation)");
-  console.log("- azure-pipelines.yml (example pipeline)");
+  console.log("- azure-pipelines.yaml (example pipeline)");
 }
 
 if (require.main === module) {

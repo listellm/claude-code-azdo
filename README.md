@@ -35,7 +35,7 @@ pnpm run create:vsix
     timeout_minutes: "10"
 ```
 
-See [`azure-pipelines.yml`](./azure-pipelines.yml) for complete examples covering all providers and use cases.
+See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples covering all providers and use cases.
 
 ## Task Inputs
 

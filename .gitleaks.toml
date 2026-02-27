@@ -1,0 +1,5 @@
+title = "gitleaks config"
+
+[[allowlists]]
+description = "Ignore detect-secrets baseline hashed values"
+paths = ['''\.config/\.secrets\.baseline''']
