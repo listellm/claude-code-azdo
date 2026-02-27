@@ -1,3 +1,9 @@
+## [1.0.11](https://github.com/listellm/claude-code-azdo/compare/v1.0.10...v1.0.11) (2026-02-27)
+
+### Bug Fixes
+
+- add Node20_1 fallback execution handler ([#11](https://github.com/listellm/claude-code-azdo/issues/11)) ([222a06a](https://github.com/listellm/claude-code-azdo/commit/222a06ac9f8b82f763d810ed874c1317b961594e))
+
 ## [1.0.10](https://github.com/listellm/claude-code-azdo/compare/v1.0.9...v1.0.10) (2026-02-27)
 
 ### Bug Fixes
