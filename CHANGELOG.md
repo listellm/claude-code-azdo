@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/listellm/claude-code-azdo/compare/v1.0.13...v1.1.0) (2026-02-27)
+
+### Features
+
+- native PR comment posting + model default ([#14](https://github.com/listellm/claude-code-azdo/issues/14)) ([b5c4218](https://github.com/listellm/claude-code-azdo/commit/b5c4218132d0affb41f3085470805dffac5a5f74))
+
 ## [1.0.13](https://github.com/listellm/claude-code-azdo/compare/v1.0.12...v1.0.13) (2026-02-27)
 
 ### Bug Fixes
