@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/listellm/claude-code-azdo/compare/v1.0.1...v1.0.2) (2026-02-27)
+
+### Bug Fixes
+
+- add actions: write permission to release job ([#8](https://github.com/listellm/claude-code-azdo/issues/8)) ([4a03a04](https://github.com/listellm/claude-code-azdo/commit/4a03a0433b8fe9d08568484d5c827b2ea91e171d))
+
 ## [1.0.1](https://github.com/listellm/claude-code-azdo/compare/v1.0.0...v1.0.1) (2026-02-27)
 
 ### Bug Fixes
