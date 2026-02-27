@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.7",
+  "checkpoint_id": "60cc69adffdf",
+  "session_id": "5adf1ebd-a78d-4e63-9703-8e2efe817410",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-27T14:52:48.187903688Z",
+  "branch": "fix/readme-repo-rename",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "440ff3ae65db",
+  "token_usage": {
+    "input_tokens": 5452,
+    "cache_creation_tokens": 66203,
+    "cache_read_tokens": 1830006,
+    "output_tokens": 11349,
+    "api_call_count": 35
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-27T14:52:47.836315344Z",
+    "agent_lines": 1,
+    "human_added": 1,
+    "human_modified": 3,
+    "human_removed": 0,
+    "total_committed": 5,
+    "agent_percentage": 20
+  }
+}

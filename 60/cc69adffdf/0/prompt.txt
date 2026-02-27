@@ -1,0 +1,82 @@
+this branch is a fork.  I wish to now break the fork and mkae it standalone for me
+
+---
+
+use the github api to detach it
+
+Keep history
+Rename it to something you like
+close all issues and delete releases
+
+---
+
+yes, go ahead
+
+---
+
+done, continue
+
+---
+
+update the readme with the new repo name
+
+---
+
+# gh-ship: Branch → Commit → PR → CI → Merge → CI
+
+> **GitHub repos only.** Before doing anything, confirm the repo has a GitHub remote (`git remote -v`).
+> If the remote is Azure DevOps or anything other than `github.com`, stop and tell the user this command does not apply — use the ADO MCP tools instead.
+
+Ship the current working changes end-to-end on GitHub. Run each phase in order, stopping if anything fails.
+
+## Phase 1: Branch
+
+Check current branch with `git branch --show-current`.
+
+- If on `main` or `master`: create a feature branch. Derive the name from the staged changes or `` if provided. Use kebab-case, prefixed with `fix/` or `feat/` per commit convention. Ask if unclear.
+- If already on a feature branch: continue.
+
+## Phase 2: Commit
+
+Run `git status` and `git diff --cached` to understand what is staged.
+
+- If nothing is staged: run `git diff --stat` to show unstaged changes, then ask which files to stage.
+- Stage and commit following the project commit convention (semantic: `fix:`, `feat:`, `breaking:`; subject ≤50 chars; bullet body with emojis). Do not skip pre-commit hooks (`--no-verify` is forbidden unless the user explicitly requests it).
+- If pre-commit hooks modify files, re-stage and commit again.
+
+## Phase 3: Push & PR
+
+Push the branch: `git push -u origin <branch>`.
+
+Create the PR using `gh pr create`. Follow the project PR format:
+- Short title (≤70 chars)
+- Body with `## Summary` bullets and no test plan section
+- Add `🤖 Generated with [Claude Code](https://claude.ai/claude-code)` footer
+
+Show the PR URL.
+
+## Phase 4: CI Check (post-PR)
+
+Wait for CI to complete: `gh run list --branch <branch> --limit 5` then watch the most recent run with `gh run watch <run-id>`.
+
+- If CI passes: proceed to Phase 5.
+- If CI fails: show the failed job logs (`gh run view <run-id> --log-failed`), diagnose, fix, commit, push. Re-run Phase 4.
+
+## Phase 5: Merge
+
+Once CI is green: `gh pr merge --squash --delete-branch` (use squash unless the user specifies otherwise).
+
+Confirm the merge completed and the branch was deleted.
+
+## Phase 6: CI Check (post-merge)
+
+Run `gh run list --branch main --limit 3` and watch the post-merge run.
+
+- If CI passes: done. Report the merged PR URL and final status.
+- If CI fails: report the failure with logs. Do not attempt auto-fix on main — flag it for the user.
+
+## Notes
+
+- `` can provide a branch name, PR title hint, or both.
+- Never force-push, never skip hooks, never push directly to main/master.
+- If at any point the user needs to take a manual action, stop and clearly state what is needed.
