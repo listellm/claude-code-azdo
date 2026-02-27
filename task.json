@@ -74,6 +74,22 @@
       "helpMarkDown": "Append to system prompt"
     },
     {
+      "name": "reviewer_terraform",
+      "type": "boolean",
+      "label": "Terraform Review (.tf, .tfvars)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Terraform review standards (naming, dependencies, logic, security). Reads modified .tf and .tfvars files. User prompt takes priority over these defaults."
+    },
+    {
+      "name": "reviewer_yaml",
+      "type": "boolean",
+      "label": "YAML / Kubernetes Review (.yaml, .yml)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject YAML/Kubernetes review standards (structure, secrets hygiene, resource limits). User prompt takes priority over these defaults."
+    },
+    {
       "name": "model",
       "type": "string",
       "label": "Model",
