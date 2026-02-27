@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/listellm/claude-code-azdo/compare/v1.0.0...v1.0.1) (2026-02-27)
+
+### Bug Fixes
+
+- silence github success comments and trigger publish via dispatch ([#7](https://github.com/listellm/claude-code-azdo/issues/7)) ([82943f4](https://github.com/listellm/claude-code-azdo/commit/82943f4db5da08049f3cb67c643316fcb27625e8))
+
 ## 1.0.0 (2026-02-27)
 
 ### Features
