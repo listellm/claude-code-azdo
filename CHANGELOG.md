@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/listellm/claude-code-azdo/compare/v1.2.0...v1.2.1) (2026-02-27)
+
+### Bug Fixes
+
+- default post_pr_comments to true ([#16](https://github.com/listellm/claude-code-azdo/issues/16)) ([df77cc1](https://github.com/listellm/claude-code-azdo/commit/df77cc11bf1ac23b913bc12eb46d10b552ca908e))
+
 ## [1.2.0](https://github.com/listellm/claude-code-azdo/compare/v1.1.0...v1.2.0) (2026-02-27)
 
 ### Features
