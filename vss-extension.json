@@ -3,7 +3,7 @@
   "id": "claude-code-base-task",
   "name": "Claude Code Base Task",
   "version": "1.0.7",
-  "publisher": "claswen",
+  "publisher": "listellm",
   "targets": [
     {
       "id": "Microsoft.VisualStudio.Services"

@@ -1,9 +1,5 @@
 # Claude Code AzDO Task
 
-> **Origin**: This project was originally forked from [wen-templari/claude-code-base-azure-pipeline-task](https://github.com/wen-templari/claude-code-base-azure-pipeline-task). As the upstream repository was no longer being maintained, this fork has been detached and is now developed independently.
->
-> This is still a work in progress. Most of the code was written by claude code and I have only tested the very basic functionalities (Tested using `claude_code_oauth_token` to authenticate and without mcp). Please do not use this extension in production yet.
-
 An Azure DevOps extension that runs [Claude Code](https://www.anthropic.com/claude-code) inside your pipelines for automated code analysis, review, triage, and development tasks.
 
 ## Features
@@ -17,7 +13,7 @@ An Azure DevOps extension that runs [Claude Code](https://www.anthropic.com/clau
 
 ## Installation
 
-**From the Marketplace**: Install from the [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=claswen.claude-code-base-task).
+**From the Marketplace**: Install from the [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=listellm.claude-code-base-task).
 
 **From source**:
 
@@ -39,31 +35,33 @@ pnpm run create:vsix
     timeout_minutes: "10"
 ```
 
-See `azure-pipelines.yml` for complete examples covering all providers and use cases.
+See [`azure-pipelines.yml`](./azure-pipelines.yml) for complete examples covering all providers and use cases.
 
 ## Task Inputs
 
 | Input                     | Type      | Description                                              |
 | ------------------------- | --------- | -------------------------------------------------------- |
 | `prompt`                  | multiLine | Inline prompt (mutually exclusive with `prompt_file`)    |
-| `prompt_file`             | filePath  | Path to a prompt file (mutually exclusive with `prompt`) |
-| `allowed_tools`           | string    | Comma-separated list of allowed tools                    |
-| `disallowed_tools`        | string    | Comma-separated list of disallowed tools                 |
-| `max_turns`               | string    | Maximum conversation turns                               |
+| `prompt_file`             | string    | Path to a prompt file (mutually exclusive with `prompt`) |
+| `allowed_tools`           | string    | Comma-separated list of tools Claude may use             |
+| `disallowed_tools`        | string    | Comma-separated list of tools Claude may not use         |
+| `max_turns`               | string    | Maximum conversation turns (default: no limit)           |
 | `mcp_config`              | string    | Path to an MCP config JSON file                          |
 | `system_prompt`           | multiLine | Override the system prompt                               |
-| `append_system_prompt`    | multiLine | Append to the system prompt                              |
+| `append_system_prompt`    | multiLine | Append to the default system prompt                      |
 | `model`                   | string    | Model identifier (provider-specific format)              |
 | `fallback_model`          | string    | Fallback model when the primary is unavailable           |
 | `claude_env`              | multiLine | Custom environment variables (`KEY: VALUE` per line)     |
-| `timeout_minutes`         | string    | Execution timeout in minutes (default: 10)               |
+| `timeout_minutes`         | string    | Execution timeout in minutes (default: `10`)             |
 | `anthropic_api_key`       | string    | Anthropic API key                                        |
-| `claude_code_oauth_token` | string    | Claude Code OAuth token                                  |
-| `use_bedrock`             | boolean   | Use AWS Bedrock                                          |
-| `use_vertex`              | boolean   | Use Google Vertex AI                                     |
-| `aws_region`              | string    | AWS region for Bedrock                                   |
-| `gcp_project_id`          | string    | GCP project ID for Vertex AI                             |
-| `gcp_region`              | string    | GCP region for Vertex AI                                 |
+| `claude_code_oauth_token` | string    | Claude Code OAuth token (alternative to API key)         |
+| `use_bedrock`             | boolean   | Route requests through AWS Bedrock                       |
+| `use_vertex`              | boolean   | Route requests through Google Vertex AI                  |
+| `aws_region`              | string    | AWS region (required when `use_bedrock: true`)           |
+| `gcp_project_id`          | string    | GCP project ID (required when `use_vertex: true`)        |
+| `gcp_region`              | string    | GCP region (required when `use_vertex: true`)            |
+
+`use_bedrock` and `use_vertex` are mutually exclusive.
 
 ## Task Outputs
 
@@ -74,118 +72,113 @@ See `azure-pipelines.yml` for complete examples covering all providers and use c
 
 ## Authentication
 
-### Anthropic (default)
+### Anthropic API (default)
 
 ```yaml
-inputs:
-  anthropic_api_key: "$(ANTHROPIC_API_KEY)"
-  # or
-  claude_code_oauth_token: "$(CLAUDE_CODE_OAUTH_TOKEN)"
+- task: ClaudeCodeBaseTask@1
+  inputs:
+    prompt: "..."
+    anthropic_api_key: "$(ANTHROPIC_API_KEY)"
+```
+
+Store the key as a secret pipeline variable or in Azure Key Vault.
+
+### OAuth token
+
+```yaml
+- task: ClaudeCodeBaseTask@1
+  inputs:
+    prompt: "..."
+    claude_code_oauth_token: "$(CLAUDE_CODE_OAUTH_TOKEN)"
 ```
 
 ### AWS Bedrock
 
-Set pipeline variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, then:
-
 ```yaml
-inputs:
-  use_bedrock: true
-  aws_region: "us-west-2"
-  model: "anthropic.claude-3-7-sonnet-20250219-v1:0"
+variables:
+  AWS_ACCESS_KEY_ID: $(aws-access-key-id)
+  AWS_SECRET_ACCESS_KEY: $(aws-secret-access-key)
+
+steps:
+  - task: ClaudeCodeBaseTask@1
+    inputs:
+      prompt: "..."
+      use_bedrock: true
+      aws_region: "us-east-1"
+      model: "anthropic.claude-3-7-sonnet-20250219-v1:0"
 ```
 
 ### Google Vertex AI
 
-Set pipeline variable `GOOGLE_APPLICATION_CREDENTIALS`, then:
-
 ```yaml
-inputs:
-  use_vertex: true
-  gcp_project_id: "my-gcp-project"
-  gcp_region: "us-central1"
-  model: "claude-3-7-sonnet@20250219"
-```
+variables:
+  GOOGLE_APPLICATION_CREDENTIALS: $(google-application-credentials)
 
-`use_bedrock` and `use_vertex` are mutually exclusive.
+steps:
+  - task: ClaudeCodeBaseTask@1
+    inputs:
+      prompt: "..."
+      use_vertex: true
+      gcp_project_id: "my-gcp-project"
+      gcp_region: "us-central1"
+      model: "claude-3-7-sonnet@20250219"
+```
 
 ## Custom Environment Variables
 
-The `claude_env` input accepts `KEY: VALUE` pairs (one per line). Empty lines and `#` comments are ignored. Azure DevOps variables are expanded.
+Pass extra environment variables to Claude's execution context using `KEY: VALUE` syntax
+(one per line, colon-separated — not `KEY=VALUE`):
 
 ```yaml
-inputs:
-  claude_env: |
-    ENVIRONMENT: staging
-    API_BASE_URL: https://api-staging.example.com
-    # This line is ignored
-    DATABASE_URL: $(staging-db-url)
-```
-
-## MCP Integration
-
-Write an MCP config file in a prior step and pass its path via `mcp_config`:
-
-```yaml
-- script: |
-    mkdir -p $(Agent.TempDirectory)/mcp
-    cat > $(Agent.TempDirectory)/mcp/config.json << 'EOF'
-    {
-      "mcpServers": {
-        "github": {
-          "command": "docker",
-          "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN",
-                   "ghcr.io/github/github-mcp-server:latest"],
-          "env": { "GITHUB_TOKEN": "$(System.AccessToken)" }
-        }
-      }
-    }
-    EOF
-  displayName: "Write MCP config"
-
 - task: ClaudeCodeBaseTask@1
   inputs:
-    prompt: "Analyse recent GitHub issues."
-    mcp_config: "$(Agent.TempDirectory)/mcp/config.json"
+    prompt: "..."
     anthropic_api_key: "$(ANTHROPIC_API_KEY)"
+    claude_env: |
+      MY_VAR: some_value
+      ANOTHER_VAR: another_value
+      # Comments are ignored
+```
+
+## Using Output Variables
+
+```yaml
+- task: ClaudeCodeBaseTask@1
+  name: claudeTask
+  inputs:
+    prompt: "..."
+    anthropic_api_key: "$(ANTHROPIC_API_KEY)"
+
+- script: |
+    echo "Conclusion: $(claudeTask.conclusion)"
+    echo "Execution log: $(claudeTask.execution_file)"
+  displayName: "Check Claude output"
 ```
 
 ## Development
 
-**Prerequisites**: Node.js ≥ 22, pnpm
-
 ```bash
 pnpm install          # Install dependencies
-pnpm run typecheck    # Type-check (no emit)
-pnpm run format       # Fix formatting
-pnpm test             # Run tests (vitest)
-pnpm run dev          # Fast build + validate
-pnpm run build        # Full build: lint → typecheck → test → compile → validate
+pnpm test             # Run tests
+pnpm run build        # Full build (lint → typecheck → test → compile → validate)
+pnpm run dev          # Fast build without tests/lint
 ```
+
+Requires Node.js >=22.
 
 ### Versioning
 
-Versions must stay consistent across `package.json`, `vss-extension.json`, and `task.json`. Use the bump script:
+Versions must stay consistent across `package.json`, `vss-extension.json`, and `task.json`:
 
 ```bash
-./scripts/bump-version.sh patch --auto-azure       # Bump patch across all three
+./scripts/bump-version.sh patch --auto-azure
 ./scripts/bump-version.sh minor --auto-azure --dry-run
 ```
 
-### Release
+### Publishing
 
 ```bash
-pnpm run create:vsix        # Build and package as .vsix
-pnpm run publish:extension  # Publish to Azure DevOps Marketplace
-pnpm run publish:dry-run    # Dry-run publish
+pnpm run create:vsix                                          # Build and package
+AZURE_DEVOPS_EXT_PAT=<pat> ./scripts/publish-azure-extension.sh --dry-run
+AZURE_DEVOPS_EXT_PAT=<pat> ./scripts/publish-azure-extension.sh
 ```
-
-## Contributing
-
-1. Fork [this repository](https://github.com/listellm/claude-code-azdo)
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request
-
-## Licence
-
-MIT — see the `LICENSE` file for details.
