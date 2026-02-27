@@ -46,7 +46,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Bump GitHub Action version
+      - name: Bump version
         id: version
         run: |
           # Get current version
@@ -105,7 +105,7 @@ jobs:
           body: |
             ## Version Bump
 
-            - **GitHub Action**: `${{ steps.version.outputs.new_version }}` (${{ github.event.inputs.version_type }} bump)
+            - **Package**: `${{ steps.version.outputs.new_version }}` (${{ github.event.inputs.version_type }} bump)
             ${{ github.event.inputs.azure_version != '' && format('- **Azure DevOps Extension**: `{0}`', github.event.inputs.azure_version) || '' }}
 
             ### Changes
@@ -114,8 +114,7 @@ jobs:
             ${{ github.event.inputs.azure_version != '' && '- Updated `task.json` version components' || '' }}
 
             ### Testing
-            - [ ] Verify GitHub Action works with new version
-            ${{ github.event.inputs.azure_version != '' && '- [ ] Test Azure DevOps extension build and packaging' || '' }}
+            - [ ] Verify extension build and packaging
             ${{ github.event.inputs.azure_version != '' && '- [ ] Publish Azure extension to marketplace' || '' }}
 
             *This PR was automatically created by the bump-version workflow.*
@@ -125,7 +124,7 @@ jobs:
       - name: Summary
         run: |
           echo "## Version Bump Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Action**: ${{ steps.version.outputs.new_version }} (${{ github.event.inputs.version_type }} bump)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: ${{ steps.version.outputs.new_version }} (${{ github.event.inputs.version_type }} bump)" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.event.inputs.azure_version }}" != "" ]; then
             echo "- **Azure DevOps Extension**: ${{ github.event.inputs.azure_version }}" >> $GITHUB_STEP_SUMMARY
           fi

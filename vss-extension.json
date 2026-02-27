@@ -32,7 +32,7 @@
       "path": "README.md"
     },
     {
-      "path": "./examples/azure-pipelines.yml"
+      "path": "azure-pipelines.yml"
     }
   ],
   "contributions": [
@@ -47,7 +47,7 @@
   ],
   "repository": {
     "type": "git",
-    "uri": "https://github.com/wen-templari/claude-code-base-azure-pipeline-task"
+    "uri": "https://github.com/listellm/claude-code-azdo"
   },
   "branding": {
     "color": "orange",

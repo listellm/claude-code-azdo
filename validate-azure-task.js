@@ -117,7 +117,7 @@ async function validateTaskJson() {
     }
 
     // Validate execution target
-    if (taskJson.execution?.Node20?.target === "azure-pipeline.js") {
+    if (taskJson.execution?.Node22_1?.target === "azure-pipeline.js") {
       logSuccess("Execution target is correct");
     } else {
       logError("Execution target is incorrect");

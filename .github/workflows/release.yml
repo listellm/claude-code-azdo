@@ -110,29 +110,3 @@ jobs:
         run: |
           # Update beta release to be marked as latest
           gh release edit beta --latest
-
-  trigger-downstream-update:
-    needs: create-release
-    if: ${{ !inputs.dry_run }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Trigger downstream action update
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const version = '${{ needs.create-release.outputs.next_version }}';
-            console.log(`Triggering downstream update for version: ${version}`);
-
-            await github.rest.repos.createDispatchEvent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              event_type: 'update-downstream-action',
-              client_payload: {
-                tag: version
-              }
-            });
-
-            console.log('Successfully triggered downstream update');
