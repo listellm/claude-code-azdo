@@ -35,6 +35,7 @@
       "type": "string",
       "label": "Allowed Tools",
       "required": false,
+      "defaultValue": "Bash,Read,Glob,Grep",
       "helpMarkDown": "Comma-separated list of allowed tools for Claude Code to use"
     },
     {
@@ -77,6 +78,7 @@
       "type": "string",
       "label": "Model",
       "required": false,
+      "defaultValue": "claude-sonnet-4-6",
       "helpMarkDown": "Model to use (provider-specific format required for Bedrock/Vertex)"
     },
     {
@@ -167,6 +169,14 @@
       "required": false,
       "defaultValue": true,
       "helpMarkDown": "Install Claude Code CLI if not already present. Set to false when the agent image already has the CLI installed."
+    },
+    {
+      "name": "post_pr_comments",
+      "type": "boolean",
+      "label": "Post Review as PR Comments",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Post issues as inline PR thread comments after execution. Only fires if issues are found. Requires System.AccessToken to be available."
     }
   ],
   "outputVariables": [

@@ -1,16 +1,19 @@
 import * as tl from "azure-pipelines-task-lib/task";
 import * as os from "os";
-import { runClaude, type ClaudeOptions } from "./run-claude";
+import { runClaude, type ClaudeOptions, type RunResult } from "./run-claude";
+
+export type { RunResult };
 
 /**
  * Azure DevOps adapter for runClaude.
  * Reads provider credentials from task inputs, delegates execution to the
- * shared run-claude core, then translates the result into AzDo output variables.
+ * shared run-claude core, then sets AzDo output variables.
+ * setResult and process.exit are the caller's responsibility.
  */
 export async function runClaudeAzure(
   promptPath: string,
   options: ClaudeOptions,
-): Promise<void> {
+): Promise<RunResult> {
   const tmpDir = tl.getVariable("Agent.TempDirectory") ?? os.tmpdir();
 
   const extraEnv: Record<string, string> = {
@@ -38,13 +41,5 @@ export async function runClaudeAzure(
     tl.setVariable("execution_file", result.executionFile);
   }
 
-  if (result.conclusion === "success") {
-    tl.setResult(tl.TaskResult.Succeeded, "Claude Code executed successfully");
-  } else {
-    tl.setResult(
-      tl.TaskResult.Failed,
-      `Claude Code failed with exit code: ${result.exitCode}`,
-    );
-    process.exit(result.exitCode);
-  }
+  return result;
 }
