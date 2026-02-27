@@ -35,7 +35,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "bash ./scripts/update-azure-versions.sh ${nextRelease.version}"
+        "prepareCmd": "bash ./scripts/update-azure-versions.sh ${nextRelease.version} && npx prettier --write CHANGELOG.md"
       }
     ],
     [
