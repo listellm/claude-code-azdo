@@ -61,3 +61,6 @@ coverage/
 
 # Claude settings
 **/.claude/settings.local.json
+
+# Local documentation
+.docs/
