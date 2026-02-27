@@ -11,7 +11,7 @@
   "version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 9
+    "Patch": 10
   },
   "minimumAgentVersion": "3.232.0",
   "instanceNameFormat": "Claude Code: $(prompt)",
