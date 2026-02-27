@@ -112,7 +112,7 @@ jobs:
           echo "📦 Creating VSIX package..."
           tfx extension create --manifest-globs vss-extension.json --output-path ./
 
-          VSIX_FILE="claswen.claude-code-base-task-${{ steps.version.outputs.vss_version }}.vsix"
+          VSIX_FILE="listellm.claude-code-base-task-${{ steps.version.outputs.vss_version }}.vsix"
 
           if [ ! -f "$VSIX_FILE" ]; then
             echo "❌ VSIX file not created: $VSIX_FILE"
@@ -145,7 +145,7 @@ jobs:
           tfx extension publish --vsix ${{ steps.package.outputs.vsix_file }} --token $AZURE_DEVOPS_EXT_PAT
 
           echo "✅ Extension published successfully!"
-          echo "🌐 View at: https://marketplace.visualstudio.com/items?itemName=claswen.claude-code-base-task"
+          echo "🌐 View at: https://marketplace.visualstudio.com/items?itemName=listellm.claude-code-base-task"
 
       - name: Create GitHub Release
         if: github.event.inputs.dry_run != 'true' && github.event_name == 'workflow_dispatch'
@@ -157,11 +157,11 @@ jobs:
             ## Azure DevOps Extension v${{ steps.version.outputs.vss_version }}
 
             ### 🚀 Installation
-            Install from the [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=claswen.claude-code-base-task)
+            Install from the [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=listellm.claude-code-base-task)
 
             ### 📦 Package Details
             - **Extension ID**: claude-code-base-task
-            - **Publisher**: claswen
+            - **Publisher**: listellm
             - **Version**: ${{ steps.version.outputs.vss_version }}
 
             ### 🔧 Usage
@@ -193,7 +193,7 @@ jobs:
             echo "🔍 **Dry Run Completed** - Extension was built but not published" >> $GITHUB_STEP_SUMMARY
           else
             echo "🚀 **Published Successfully**" >> $GITHUB_STEP_SUMMARY
-            echo "- [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=claswen.claude-code-base-task)" >> $GITHUB_STEP_SUMMARY
+            echo "- [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=listellm.claude-code-base-task)" >> $GITHUB_STEP_SUMMARY
             echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/azure-v${{ steps.version.outputs.vss_version }})" >> $GITHUB_STEP_SUMMARY
           fi
 

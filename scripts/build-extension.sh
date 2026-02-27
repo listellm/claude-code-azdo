@@ -99,10 +99,10 @@ log_step "Checking Node.js version..."
 NODE_VERSION=$(node --version)
 log_info "Node.js version: $NODE_VERSION"
 
-# Check if we have minimum required Node.js version (18.x)
-REQUIRED_VERSION="18.0.0"
+# Check if we have minimum required Node.js version (22.x)
+REQUIRED_VERSION="22.0.0"
 if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$NODE_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
-    log_warning "Node.js version $NODE_VERSION might be too old. Recommended: 18.x or higher"
+    log_warning "Node.js version $NODE_VERSION might be too old. Recommended: 22.x or higher"
 fi
 
 # Install dependencies
@@ -167,24 +167,25 @@ log_success "task.json copied"
 
 # Copy additional required files
 log_step "Copying additional files..."
-if [ -f "README-azure.md" ]; then
-    cp README-azure.md dist/
-    log_success "README-azure.md copied"
-fi
-
 if [ -f "LICENSE" ]; then
     cp LICENSE dist/
     log_success "LICENSE copied"
 fi
 
 # Install production dependencies in dist
+# Use npm (not pnpm) to install directly into dist/node_modules.
+# pnpm crawls up to the workspace root and never creates a local node_modules here.
+# A minimal package.json is required so npm does not traverse up to the workspace root
+# and get confused by pnpm's virtual store.
 log_step "Installing production dependencies in dist..."
 cd dist
+echo '{}' > package.json
 if [ "$VERBOSE" = true ]; then
-    pnpm install azure-pipelines-task-lib --production
+    npm install azure-pipelines-task-lib --omit=dev --no-package-lock
 else
-    pnpm install azure-pipelines-task-lib --production --silent
+    npm install azure-pipelines-task-lib --omit=dev --no-package-lock --silent
 fi
+rm package.json
 cd ..
 log_success "Production dependencies installed in dist"
 

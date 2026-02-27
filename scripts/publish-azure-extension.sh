@@ -88,7 +88,7 @@ pnpm run validate:build
 echo "📦 Creating VSIX package..."
 pnpm run create:vsix
 
-VSIX_FILE="claswen.claude-code-base-task-$VSS_VERSION.vsix"
+VSIX_FILE="listellm.claude-code-base-task-$VSS_VERSION.vsix"
 
 if [ ! -f "$VSIX_FILE" ]; then
     echo "❌ VSIX file not created: $VSIX_FILE"
@@ -125,7 +125,7 @@ echo "$AZURE_DEVOPS_EXT_PAT" | tfx extension publish --vsix "$VSIX_FILE" --token
 
 echo "✅ Extension published successfully!"
 echo ""
-echo "🌐 View at: https://marketplace.visualstudio.com/items?itemName=claswen.claude-code-base-task"
+echo "🌐 View at: https://marketplace.visualstudio.com/items?itemName=listellm.claude-code-base-task"
 echo ""
 echo "📋 Summary:"
 echo "  - Version: $VSS_VERSION"
