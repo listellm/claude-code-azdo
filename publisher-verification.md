@@ -85,7 +85,7 @@ The blue verified badge requires an additional manual review by the Marketplace 
 - Publisher has maintained extensions for at least 6 months
 - Website responds correctly over HTTPS
 
-> **Note**: Domain verification is required to publish. The verified *badge* is separate and
+> **Note**: Domain verification is required to publish. The verified _badge_ is separate and
 > only granted after the review above. You can publish without the badge.
 
 ---

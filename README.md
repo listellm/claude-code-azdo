@@ -39,35 +39,35 @@ See [`azure-pipelines.yml`](./azure-pipelines.yml) for complete examples coverin
 
 ## Task Inputs
 
-| Input | Type | Description |
-|-------|------|-------------|
-| `prompt` | multiLine | Inline prompt (mutually exclusive with `prompt_file`) |
-| `prompt_file` | string | Path to a prompt file (mutually exclusive with `prompt`) |
-| `allowed_tools` | string | Comma-separated list of tools Claude may use |
-| `disallowed_tools` | string | Comma-separated list of tools Claude may not use |
-| `max_turns` | string | Maximum conversation turns (default: no limit) |
-| `mcp_config` | string | Path to an MCP config JSON file |
-| `system_prompt` | multiLine | Override the system prompt |
-| `append_system_prompt` | multiLine | Append to the default system prompt |
-| `model` | string | Model identifier (provider-specific format) |
-| `fallback_model` | string | Fallback model when the primary is unavailable |
-| `claude_env` | multiLine | Custom environment variables (`KEY: VALUE` per line) |
-| `timeout_minutes` | string | Execution timeout in minutes (default: `10`) |
-| `anthropic_api_key` | string | Anthropic API key |
-| `claude_code_oauth_token` | string | Claude Code OAuth token (alternative to API key) |
-| `use_bedrock` | boolean | Route requests through AWS Bedrock |
-| `use_vertex` | boolean | Route requests through Google Vertex AI |
-| `aws_region` | string | AWS region (required when `use_bedrock: true`) |
-| `gcp_project_id` | string | GCP project ID (required when `use_vertex: true`) |
-| `gcp_region` | string | GCP region (required when `use_vertex: true`) |
+| Input                     | Type      | Description                                              |
+| ------------------------- | --------- | -------------------------------------------------------- |
+| `prompt`                  | multiLine | Inline prompt (mutually exclusive with `prompt_file`)    |
+| `prompt_file`             | string    | Path to a prompt file (mutually exclusive with `prompt`) |
+| `allowed_tools`           | string    | Comma-separated list of tools Claude may use             |
+| `disallowed_tools`        | string    | Comma-separated list of tools Claude may not use         |
+| `max_turns`               | string    | Maximum conversation turns (default: no limit)           |
+| `mcp_config`              | string    | Path to an MCP config JSON file                          |
+| `system_prompt`           | multiLine | Override the system prompt                               |
+| `append_system_prompt`    | multiLine | Append to the default system prompt                      |
+| `model`                   | string    | Model identifier (provider-specific format)              |
+| `fallback_model`          | string    | Fallback model when the primary is unavailable           |
+| `claude_env`              | multiLine | Custom environment variables (`KEY: VALUE` per line)     |
+| `timeout_minutes`         | string    | Execution timeout in minutes (default: `10`)             |
+| `anthropic_api_key`       | string    | Anthropic API key                                        |
+| `claude_code_oauth_token` | string    | Claude Code OAuth token (alternative to API key)         |
+| `use_bedrock`             | boolean   | Route requests through AWS Bedrock                       |
+| `use_vertex`              | boolean   | Route requests through Google Vertex AI                  |
+| `aws_region`              | string    | AWS region (required when `use_bedrock: true`)           |
+| `gcp_project_id`          | string    | GCP project ID (required when `use_vertex: true`)        |
+| `gcp_region`              | string    | GCP region (required when `use_vertex: true`)            |
 
 `use_bedrock` and `use_vertex` are mutually exclusive.
 
 ## Task Outputs
 
-| Output | Description |
-|--------|-------------|
-| `conclusion` | `success` or `failure` |
+| Output           | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `conclusion`     | `success` or `failure`                        |
 | `execution_file` | Path to the NDJSON execution log (JSON array) |
 
 ## Authentication
