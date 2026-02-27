@@ -1,4 +1,4 @@
-# Claude Code Base Task for Azure DevOps
+# Claude Code AzDO Task
 
 An Azure DevOps extension that enables you to run Claude Code within your Azure DevOps pipelines for automated code assistance, reviews, and development tasks.
 
