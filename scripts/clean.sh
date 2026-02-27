@@ -101,7 +101,7 @@ NODE_ARTIFACTS=(
 safe_remove() {
     local item="$1"
     local description="$2"
-    
+
     if [ -e "$item" ] || [ -L "$item" ]; then
         if [ "$VERBOSE" = true ]; then
             log_info "Removing $description: $item"

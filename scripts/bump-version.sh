@@ -140,22 +140,22 @@ fi
 # Update Azure extension files if requested
 if [ "$AUTO_AZURE" = true ]; then
     log_step "Updating Azure extension files..."
-    
+
     # Extract major, minor, patch from version
     IFS='.' read -r MAJOR MINOR PATCH <<< "$ACTUAL_NEW_VERSION"
-    
+
     if [ "$DRY_RUN" = false ]; then
         # Update vss-extension.json
         sed -i.tmp "s/\"version\": \"[^\"]*\"/\"version\": \"$ACTUAL_NEW_VERSION\"/" vss-extension.json
-        
+
         # Update task.json
         sed -i.tmp "s/\"Major\": [0-9]*/\"Major\": $MAJOR/" task.json
         sed -i.tmp "s/\"Minor\": [0-9]*/\"Minor\": $MINOR/" task.json
         sed -i.tmp "s/\"Patch\": [0-9]*/\"Patch\": $PATCH/" task.json
-        
+
         # Clean up temporary files
         rm -f vss-extension.json.tmp task.json.tmp
-        
+
         log_success "Updated Azure extension to $ACTUAL_NEW_VERSION"
     else
         log_info "Would update vss-extension.json to $ACTUAL_NEW_VERSION"
@@ -166,31 +166,31 @@ fi
 # Validate version consistency
 if [ "$DRY_RUN" = false ]; then
     log_step "Validating version consistency..."
-    
+
     PACKAGE_VERSION=$(node -p "require('./package.json').version")
     VSS_VERSION=$(node -p "require('./vss-extension.json').version")
     TASK_VERSION=$(node -p "const task = require('./task.json'); \`\${task.version.Major}.\${task.version.Minor}.\${task.version.Patch}\`")
-    
+
     log_info "Package version: $PACKAGE_VERSION"
     log_info "VSS extension version: $VSS_VERSION"
     log_info "Task version: $TASK_VERSION"
-    
+
     if [ "$AUTO_AZURE" = true ]; then
         if [ "$VSS_VERSION" != "$TASK_VERSION" ]; then
             log_error "Version mismatch between vss-extension.json and task.json"
-            
+
             # Restore from backups
             mv package.json.bak package.json
             mv vss-extension.json.bak vss-extension.json
             mv task.json.bak task.json
-            
+
             exit 1
         fi
     fi
-    
+
     # Clean up backup files
     rm -f package.json.bak vss-extension.json.bak task.json.bak
-    
+
     log_success "Version consistency validated"
 fi
 
@@ -212,7 +212,7 @@ if [ "$DRY_RUN" = false ]; then
     echo "  4. Create a pull request or push to main"
     echo "  5. Build and test extension: npm run create:vsix"
     echo "  6. Publish if everything looks good: npm run publish:extension"
-    
+
     # Check if there are any uncommitted changes
     if git diff --quiet; then
         log_warning "No changes detected. This might indicate a problem."

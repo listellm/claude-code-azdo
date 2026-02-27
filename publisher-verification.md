@@ -97,7 +97,7 @@ is already set in all the correct places in the codebase:
 
 - `vss-extension.json` — `"publisher": "listellm"`
 - `scripts/publish-azure-extension.sh` — VSIX filename and Marketplace URL
-- `.github/workflows/publish-azure-extension.yml` — VSIX filename and Marketplace URLs
+- `.github/workflows/publish-azure-extension.yaml` — VSIX filename and Marketplace URLs
 - `README.md` — Marketplace install link
 
 To publish:

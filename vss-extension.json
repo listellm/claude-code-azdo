@@ -32,7 +32,7 @@
       "path": "README.md"
     },
     {
-      "path": "azure-pipelines.yml"
+      "path": "azure-pipelines.yaml"
     }
   ],
   "contributions": [

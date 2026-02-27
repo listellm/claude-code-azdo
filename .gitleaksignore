@@ -1,0 +1,13 @@
+# detect-secrets baseline stores SHA1 hashes of secret values; these are not real secrets
+.config/.secrets.baseline:generic-api-key:136
+.config/.secrets.baseline:generic-api-key:143
+.config/.secrets.baseline:generic-api-key:152
+.config/.secrets.baseline:generic-api-key:161
+.config/.secrets.baseline:generic-api-key:168
+.config/.secrets.baseline:generic-api-key:175
+.config/.secrets.baseline:generic-api-key:182
+.config/.secrets.baseline:generic-api-key:189
+.config/.secrets.baseline:generic-api-key:196
+.config/.secrets.baseline:generic-api-key:205
+.config/.secrets.baseline:generic-api-key:212
+.config/.secrets.baseline:generic-api-key:221
