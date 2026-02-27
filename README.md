@@ -1,5 +1,7 @@
-# Claude Code Base Task for Azure DevOps
+# Claude Code AzDO Task
 
+> **Origin**: This project was originally forked from [wen-templari/claude-code-base-azure-pipeline-task](https://github.com/wen-templari/claude-code-base-azure-pipeline-task). As the upstream repository was no longer being maintained, this fork has been detached and is now developed independently.
+>
 > This is still a work in progress. Most of the code was written by claude code and I have only tested the very basic functionalities (Tested using `claude_code_oauth_token` to authenticate and without mcp). Please do not use this extension in production yet.
 
 This Azure DevOps extension allows you to run [Claude Code](https://www.anthropic.com/claude-code) within your Azure DevOps pipelines for automated code analysis, issue triage, and development tasks.
@@ -225,7 +227,7 @@ The `claude_env` input accepts YAML multiline format with key-value pairs:
     anthropic_api_key: "$(ANTHROPIC_API_KEY)"
 ```
 
-### Features:
+### Features
 
 - **YAML Format**: Use standard YAML key-value syntax (`KEY: value`)
 - **Multiline Support**: Define multiple environment variables in a single input
@@ -352,6 +354,7 @@ To securely use your Anthropic API key:
    - Check "Keep this value secret"
 
 2. Reference the secret in your task:
+
    ```yaml
    anthropic_api_key: "$(ANTHROPIC_API_KEY)"
    ```
@@ -382,7 +385,7 @@ See the `azure-pipelines.yml` file for complete pipeline examples including:
 
 ## Contributing
 
-1. Fork the repository
+1. Fork [this repository](https://github.com/listellm/claude-code-azdo)
 2. Create a feature branch
 3. Make your changes
 4. Add tests for new functionality
@@ -466,7 +469,7 @@ pnpm run create:vsix
 
 The build creates the following structure:
 
-```
+```text
 dist/
 ├── azure-pipeline.js          # Main entry point
 ├── azure-run-claude.js        # Claude execution logic
