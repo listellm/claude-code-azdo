@@ -191,7 +191,7 @@
       "type": "boolean",
       "label": "Post Review as PR Comments",
       "required": false,
-      "defaultValue": false,
+      "defaultValue": true,
       "helpMarkDown": "Post issues as inline PR thread comments after execution. Only fires if issues are found. Requires System.AccessToken to be available."
     }
   ],
