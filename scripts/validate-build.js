@@ -137,8 +137,8 @@ function validateTaskDefinition(taskJsonPath) {
   }
 
   // Check execution target
-  if (taskDef.execution && taskDef.execution.Node20_1) {
-    const targetFile = taskDef.execution.Node20_1.target;
+  if (taskDef.execution && taskDef.execution.Node22_1) {
+    const targetFile = taskDef.execution.Node22_1.target;
     const targetPath = path.join(path.dirname(taskJsonPath), targetFile);
     if (!fs.existsSync(targetPath)) {
       log("error", `task.json execution target not found: ${targetFile}`);

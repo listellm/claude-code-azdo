@@ -29,6 +29,8 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -168,12 +170,11 @@ jobs:
               inputs:
                 prompt: 'Your prompt here'
                 anthropic_api_key: '$(ANTHROPIC_API_KEY)'
-                allowed_tools: 'Bash(git:*),View,GlobTool,GrepTool,BatchTool'
+                allowed_tools: 'Bash,Glob,Grep,Read,LS'
             ```
 
             ### 📖 Documentation
-            - [Azure DevOps Documentation](./README-azure.md)
-            - [GitHub Action Documentation](./README.md)
+            - [Documentation](./README.md)
 
             *Published automatically from GitHub Actions*
           files: ${{ steps.package.outputs.vsix_file }}

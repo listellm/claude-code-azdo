@@ -36,13 +36,7 @@ stages:
           - task: NodeTool@0
             displayName: "Install Node.js"
             inputs:
-              versionSpec: "20.x"
-
-          - script: |
-              # Install dependencies for the Claude Code task
-              npm install -g @anthropic-ai/claude-code@1.0.51
-              npm install
-            displayName: "Install dependencies"
+              versionSpec: "22.x"
 
           - script: |
               # Create MCP configuration for GitHub integration
@@ -53,12 +47,9 @@ stages:
                   "github": {
                     "command": "docker",
                     "args": [
-                      "run",
-                      "-i",
-                      "--rm",
-                      "-e",
-                      "GITHUB_TOKEN",
-                      "ghcr.io/github/github-mcp-server:sha-7aced2b"
+                      "run", "-i", "--rm",
+                      "-e", "GITHUB_TOKEN",
+                      "ghcr.io/github/github-mcp-server:latest"
                     ],
                     "env": {
                       "GITHUB_TOKEN": "$(System.AccessToken)"
@@ -70,19 +61,18 @@ stages:
             displayName: "Setup MCP Configuration"
 
           - script: |
-              # Create a comprehensive code analysis prompt
               mkdir -p $(Agent.TempDirectory)/claude-prompts
               cat > $(Agent.TempDirectory)/claude-prompts/analysis-prompt.txt << 'EOF'
               You are a senior software engineer reviewing this codebase. Please perform a comprehensive analysis covering:
 
               1. **Code Quality Assessment**
-                 - Review code structure and organization
+                 - Review code structure and organisation
                  - Identify potential bugs or security vulnerabilities
                  - Check for code smells and anti-patterns
                  - Assess adherence to best practices
 
               2. **Architecture Review**
-                 - Analyze the overall architecture and design patterns
+                 - Analyse the overall architecture and design patterns
                  - Identify potential scalability issues
                  - Review dependency management
                  - Suggest architectural improvements
@@ -100,7 +90,7 @@ stages:
               5. **Performance Analysis**
                  - Identify potential performance bottlenecks
                  - Review resource usage patterns
-                 - Suggest optimization opportunities
+                 - Suggest optimisation opportunities
 
               Please provide specific, actionable recommendations for each area.
               EOF
@@ -129,12 +119,7 @@ stages:
           - task: NodeTool@0
             displayName: "Install Node.js"
             inputs:
-              versionSpec: "18.x"
-
-          - script: |
-              npm install -g @anthropic-ai/claude-code@1.0.51
-              npm install
-            displayName: "Install dependencies"
+              versionSpec: "22.x"
 
           - task: ClaudeCodeBaseTask@1
             displayName: "Security Analysis"
@@ -144,10 +129,10 @@ stages:
 
                 1. Look for common security vulnerabilities (OWASP Top 10)
                 2. Check for secrets or sensitive data in the code
-                3. Review authentication and authorization mechanisms
+                3. Review authentication and authorisation mechanisms
                 4. Identify potential injection vulnerabilities
                 5. Check for insecure dependencies
-                6. Review input validation and sanitization
+                6. Review input validation and sanitisation
 
                 Provide specific recommendations for each finding.
               allowed_tools: "Bash,Glob,Grep,Read,LS"
@@ -169,20 +154,15 @@ stages:
           - task: NodeTool@0
             displayName: "Install Node.js"
             inputs:
-              versionSpec: "18.x"
-
-          - script: |
-              npm install -g @anthropic-ai/claude-code@1.0.51
-              npm install
-            displayName: "Install dependencies"
+              versionSpec: "22.x"
 
           - task: ClaudeCodeBaseTask@1
             displayName: "Claude via Bedrock"
             inputs:
-              prompt: "Analyze this codebase and provide suggestions for improvement."
+              prompt: "Analyse this codebase and provide suggestions for improvement."
               use_bedrock: true
               aws_region: "us-east-1"
-              model: "anthropic.claude-3-sonnet-20240229-v1:0"
+              model: "anthropic.claude-3-7-sonnet-20250219-v1:0"
               timeout_minutes: "10"
               allowed_tools: "Bash,Glob,Grep,Read,LS"
 
@@ -195,12 +175,7 @@ stages:
           - task: NodeTool@0
             displayName: "Install Node.js"
             inputs:
-              versionSpec: "18.x"
-
-          - script: |
-              npm install -g @anthropic-ai/claude-code@1.0.51
-              npm install
-            displayName: "Install dependencies"
+              versionSpec: "22.x"
 
           - task: ClaudeCodeBaseTask@1
             displayName: "Claude via Vertex AI"
@@ -209,7 +184,7 @@ stages:
               use_vertex: true
               gcp_project_id: "my-gcp-project"
               gcp_region: "us-central1"
-              model: "claude-3-sonnet@20240229"
+              model: "claude-3-7-sonnet@20250219"
               timeout_minutes: "10"
               allowed_tools: "Bash,Glob,Grep,Read,LS"
 
@@ -225,12 +200,12 @@ stages:
           - task: NodeTool@0
             displayName: "Install Node.js"
             inputs:
-              versionSpec: "18.x"
+              versionSpec: "22.x"
 
           - script: |
-              npm install
-              npm run build:azure
-              npm run package:azure
+              npm install -g pnpm
+              pnpm install
+              pnpm run package:azure
             displayName: "Build and Package Task"
 
           - publish: "dist/"
