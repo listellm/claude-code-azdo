@@ -7,11 +7,21 @@ import { setupAzureEnvironment } from "./azure-setup";
 import { setupClaudeCodeSettings } from "./setup-claude-code-settings";
 import { validateEnvironmentVariablesAzure } from "./azure-validate-env";
 import { postPrReviewComments } from "./azure-pr-comment";
-import { PR_ISSUES_INSTRUCTION } from "./pr-comment-core";
+import { extractIssues, PR_ISSUES_INSTRUCTION } from "./pr-comment-core";
 import {
   buildReviewerSystemPrompt,
   type ReviewerTypeKey,
 } from "./reviewer-types";
+import {
+  buildCachePreamble,
+  buildUpdatedState,
+  computeDirtyFiles,
+  hashPrompt,
+  readPrState,
+  writePrState,
+  type PrState,
+  type S3Config,
+} from "./pr-state";
 
 /**
  * Builds a PR context preamble from AzDo pipeline variables.
@@ -70,11 +80,6 @@ async function run(): Promise<void> {
       rawPrompt = "Perform the review.";
     }
 
-    const promptConfig = await preparePrompt({
-      prompt: preamble + rawPrompt,
-      promptFile,
-    });
-
     const postPrComments = tl.getBoolInput("post_pr_comments", false);
     const minimumSeverity = (
       tl.getInput("minimum_severity", false) ?? "WARNING"
@@ -91,6 +96,63 @@ async function run(): Promise<void> {
         .filter(Boolean)
         .join("\n\n") || undefined;
 
+    // --- S3 state caching (opt-in via s3_state_bucket) ---
+    const s3StateBucket = tl.getInput("s3_state_bucket", false) ?? "";
+    const s3StatePrefix =
+      tl.getInput("s3_state_prefix", false) || "claude-pr-state";
+    const prId = tl.getVariable("System.PullRequest.PullRequestId") ?? "";
+    const repoId = tl.getVariable("Build.Repository.ID") ?? "";
+    const targetBranch =
+      tl.getVariable("System.PullRequest.TargetBranchName") ?? "";
+    const modelId = tl.getInput("model", false) || "claude-sonnet-4-6";
+
+    let s3Config: S3Config | null = null;
+    let state: PrState | null = null;
+    let dirtyFiles: string[] = [];
+    let fileHashes: Record<string, string> = {};
+    let promptHashValue = "";
+    let cachePreamble = "";
+
+    if (s3StateBucket && prId && repoId) {
+      const awsRegion =
+        tl.getInput("aws_region", false) ??
+        tl.getVariable("AWS_REGION") ??
+        "us-east-1";
+
+      s3Config = {
+        bucket: s3StateBucket,
+        prefix: s3StatePrefix,
+        region: awsRegion,
+      };
+
+      state = await readPrState(s3Config, repoId, prId);
+      promptHashValue = hashPrompt(appendSystemPrompt ?? "");
+
+      const dirtyResult = await computeDirtyFiles(
+        targetBranch,
+        state,
+        modelId,
+        promptHashValue,
+      );
+      dirtyFiles = dirtyResult.dirtyFiles;
+      fileHashes = dirtyResult.fileHashes;
+
+      const allChangedFiles = Object.keys(fileHashes);
+      cachePreamble = buildCachePreamble(dirtyFiles, allChangedFiles, state);
+
+      if (cachePreamble) {
+        console.log(
+          `S3 cache: ${allChangedFiles.length - dirtyFiles.length} unchanged file(s), ${dirtyFiles.length} dirty`,
+        );
+      }
+    }
+    // --- end S3 state caching setup ---
+
+    const promptConfig = await preparePrompt({
+      prompt: preamble + cachePreamble + rawPrompt,
+      promptFile,
+    });
+
     const result = await runClaudeAzure(promptConfig.path, {
       allowedTools: tl.getInput("allowed_tools", false) ?? undefined,
       disallowedTools: tl.getInput("disallowed_tools", false) ?? undefined,
@@ -103,8 +165,37 @@ async function run(): Promise<void> {
       timeoutMinutes: tl.getInput("timeout_minutes", false) ?? undefined,
     });
 
+    let postedIssues: import("./pr-comment-core").ReviewIssue[] = [];
+
     if (postPrComments && result.executionFile) {
-      await postPrReviewComments(result.executionFile, minimumSeverity);
+      const postedFingerprints = state
+        ? new Set(state.postedFingerprints)
+        : undefined;
+      postedIssues = await postPrReviewComments(
+        result.executionFile,
+        minimumSeverity,
+        postedFingerprints,
+      );
+    }
+
+    // Write updated S3 state after run
+    if (s3Config && prId && repoId && result.executionFile) {
+      const allNewIssues = await extractIssues(
+        result.executionFile,
+        "SUGGESTION",
+      );
+      const updatedState = buildUpdatedState(
+        state,
+        prId,
+        repoId,
+        modelId,
+        promptHashValue,
+        fileHashes,
+        dirtyFiles,
+        allNewIssues,
+        postedIssues,
+      );
+      await writePrState(s3Config, updatedState);
     }
 
     if (result.conclusion === "success") {
