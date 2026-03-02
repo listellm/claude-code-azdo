@@ -1,3 +1,9 @@
+## [3.1.0](https://github.com/listellm/claude-code-azdo/compare/v3.0.2...v3.1.0) (2026-03-02)
+
+### Features
+
+- add helm, cilium, dockerfile reviewers ([#23](https://github.com/listellm/claude-code-azdo/issues/23)) ([eda4fd4](https://github.com/listellm/claude-code-azdo/commit/eda4fd4f16f22b6b00f420ee4b0cf8df1ae33176))
+
 ## [3.0.2](https://github.com/listellm/claude-code-azdo/compare/v3.0.1...v3.0.2) (2026-03-02)
 
 ### Bug Fixes
