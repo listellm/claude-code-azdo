@@ -81,11 +81,6 @@ function validateJavaScriptFile(filePath, description) {
       );
     }
 
-    // Check for proper module exports
-    if (!content.includes("module.exports") && !content.includes("exports.")) {
-      log("warning", `${description} may not export anything`);
-    }
-
     log("success", `${description} appears to be valid JavaScript`);
     return true;
   } catch (error) {
@@ -211,16 +206,7 @@ function validateDistStructure() {
     return false;
   }
 
-  const requiredFiles = [
-    "azure-pipeline.js",
-    "azure-run-claude.js",
-    "azure-setup.js",
-    "azure-validate-env.js",
-    "prepare-prompt.js",
-    "setup-claude-code-settings.js",
-    "validate-env.js",
-    "task.json",
-  ];
+  const requiredFiles = ["azure-pipeline.js", "task.json"];
 
   let valid = true;
 
@@ -232,10 +218,14 @@ function validateDistStructure() {
     }
   }
 
-  // Check node_modules exists
-  const nodeModulesPath = path.join(distPath, "node_modules");
-  if (!fs.existsSync(nodeModulesPath)) {
-    log("error", "node_modules missing in dist directory");
+  // Check azure-pipelines-task-lib exists (sole external dependency)
+  const taskLibPath = path.join(
+    distPath,
+    "node_modules",
+    "azure-pipelines-task-lib",
+  );
+  if (!fs.existsSync(taskLibPath)) {
+    log("error", "azure-pipelines-task-lib missing in dist/node_modules");
     valid = false;
   }
 
@@ -247,24 +237,14 @@ function validateDistStructure() {
 }
 
 function validateDependencies() {
-  const distNodeModulesPath = "dist/node_modules";
+  const taskLibPath = "dist/node_modules/azure-pipelines-task-lib";
 
-  if (!fs.existsSync(distNodeModulesPath)) {
-    log("error", "dist/node_modules does not exist");
-    return false;
-  }
-
-  // Check for required Azure DevOps task library
-  const azureTaskLibPath = path.join(
-    distNodeModulesPath,
-    "azure-pipelines-task-lib",
-  );
-  if (!fs.existsSync(azureTaskLibPath)) {
+  if (!fs.existsSync(taskLibPath)) {
     log("error", "azure-pipelines-task-lib not found in dist/node_modules");
     return false;
   }
 
-  log("success", "Required dependencies are present");
+  log("success", "azure-pipelines-task-lib is present");
   return true;
 }
 
@@ -280,11 +260,7 @@ function generateBuildReport() {
   };
 
   // Get file sizes
-  const filesToCheck = [
-    "dist/azure-pipeline.js",
-    "dist/azure-run-claude.js",
-    "dist/task.json",
-  ];
+  const filesToCheck = ["dist/azure-pipeline.js", "dist/task.json"];
 
   for (const file of filesToCheck) {
     if (fs.existsSync(file)) {
@@ -322,21 +298,12 @@ function main() {
       fn: () => validateTaskDefinition("dist/task.json"),
     },
     {
-      name: "JavaScript Files",
-      fn: () => {
-        const jsFiles = [
-          {
-            path: "dist/azure-pipeline.js",
-            desc: "Azure Pipeline Entry Point",
-          },
-          { path: "dist/azure-run-claude.js", desc: "Azure Run Claude" },
-          { path: "dist/prepare-prompt.js", desc: "Prepare Prompt" },
-        ];
-
-        return jsFiles.every((file) =>
-          validateJavaScriptFile(file.path, file.desc),
-        );
-      },
+      name: "JavaScript Bundle",
+      fn: () =>
+        validateJavaScriptFile(
+          "dist/azure-pipeline.js",
+          "Azure Pipeline Bundle",
+        ),
     },
     { name: "Version Consistency", fn: validateVersionConsistency },
     { name: "Dependencies", fn: validateDependencies },

@@ -100,8 +100,8 @@ jobs:
             exit 1
           fi
 
-          if [ ! -d "dist/node_modules" ]; then
-            echo "❌ Missing node_modules in dist"
+          if [ ! -d "dist/node_modules/azure-pipelines-task-lib" ]; then
+            echo "❌ Missing azure-pipelines-task-lib in dist"
             exit 1
           fi
 

@@ -151,12 +151,18 @@ else
     log_warning "Skipping tests"
 fi
 
-# Build TypeScript
-log_step "Building TypeScript..."
-if tsc --project tsconfig.build.json; then
-    log_success "TypeScript compilation successful"
+# Bundle with esbuild
+log_step "Bundling with esbuild..."
+if npx esbuild src/azure-pipeline.ts \
+    --bundle \
+    --platform=node \
+    --target=node22 \
+    --format=cjs \
+    --outfile=dist/azure-pipeline.js \
+    --external:azure-pipelines-task-lib; then
+    log_success "esbuild bundle successful"
 else
-    log_error "TypeScript compilation failed"
+    log_error "esbuild bundle failed"
     exit 1
 fi
 
@@ -172,22 +178,20 @@ if [ -f "LICENSE" ]; then
     log_success "LICENSE copied"
 fi
 
-# Install production dependencies in dist
-# Use npm (not pnpm) to install directly into dist/node_modules.
-# pnpm crawls up to the workspace root and never creates a local node_modules here.
-# A minimal package.json is required so npm does not traverse up to the workspace root
-# and get confused by pnpm's virtual store.
-log_step "Installing production dependencies in dist..."
+# Install azure-pipelines-task-lib (sole external dependency) in dist
+# This package must remain external because it reads lib.json at runtime via __dirname.
+# A minimal package.json is required so npm does not traverse up to the workspace root.
+log_step "Installing azure-pipelines-task-lib in dist..."
 cd dist
 echo '{}' > package.json
 if [ "$VERBOSE" = true ]; then
-    npm install azure-pipelines-task-lib @aws-sdk/client-s3 @anthropic-ai/sdk @anthropic-ai/bedrock-sdk --omit=dev --no-package-lock
+    npm install azure-pipelines-task-lib --omit=dev --no-package-lock
 else
-    npm install azure-pipelines-task-lib @aws-sdk/client-s3 @anthropic-ai/sdk @anthropic-ai/bedrock-sdk --omit=dev --no-package-lock --silent
+    npm install azure-pipelines-task-lib --omit=dev --no-package-lock --silent
 fi
 rm package.json
 cd ..
-log_success "Production dependencies installed in dist"
+log_success "azure-pipelines-task-lib installed in dist"
 
 # Validate build output
 log_step "Validating build output..."
@@ -195,14 +199,8 @@ log_step "Validating build output..."
 # Check required files exist
 REQUIRED_FILES=(
     "dist/azure-pipeline.js"
-    "dist/azure-run-claude.js"
-    "dist/azure-setup.js"
-    "dist/azure-validate-env.js"
-    "dist/prepare-prompt.js"
-    "dist/setup-claude-code-settings.js"
-    "dist/validate-env.js"
     "dist/task.json"
-    "dist/node_modules"
+    "dist/node_modules/azure-pipelines-task-lib"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -212,20 +210,14 @@ for file in "${REQUIRED_FILES[@]}"; do
     fi
 done
 
-# Check JavaScript files are valid
-log_step "Validating JavaScript files..."
-for js_file in dist/*.js; do
-    if [ -f "$js_file" ]; then
-        if node -c "$js_file" 2>/dev/null; then
-            if [ "$VERBOSE" = true ]; then
-                log_success "$(basename "$js_file") is valid"
-            fi
-        else
-            log_error "Invalid JavaScript file: $js_file"
-            exit 1
-        fi
-    fi
-done
+# Check bundled JavaScript file is valid
+log_step "Validating JavaScript bundle..."
+if node -c "dist/azure-pipeline.js" 2>/dev/null; then
+    log_success "azure-pipeline.js is valid"
+else
+    log_error "Invalid JavaScript bundle: dist/azure-pipeline.js"
+    exit 1
+fi
 
 # Check task.json is valid
 log_step "Validating task.json..."
