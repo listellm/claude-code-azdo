@@ -1,5 +1,12 @@
 # Claude Code AzDO Task
 
+[![CI](https://github.com/listellm/claude-code-azdo/actions/workflows/ci.yaml/badge.svg)](https://github.com/listellm/claude-code-azdo/actions/workflows/ci.yaml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Vitest](https://img.shields.io/badge/Vitest-tested-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/listellm.claude-code-base-task?label=Marketplace&logo=azure-devops)](https://marketplace.visualstudio.com/items?itemName=listellm.claude-code-base-task)
+[![License: MIT](https://img.shields.io/github/license/listellm/claude-code-azdo)](./LICENSE)
+
 An Azure DevOps extension that runs [Claude Code](https://www.anthropic.com/claude-code) inside your pipelines for automated code analysis, review, triage, and development tasks.
 
 > **Fork notice**: This project is a fork of [wen-templari/claude-code-base-azure-pipeline-task](https://github.com/wen-templari/claude-code-base-azure-pipeline-task).
@@ -43,49 +50,52 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 
 ## Task Inputs
 
-| Input                      | Type      | Default           | Description                                                             |
-| -------------------------- | --------- | ----------------- | ----------------------------------------------------------------------- |
-| `prompt`                   | multiLine |                   | Inline prompt (mutually exclusive with `prompt_file`)                   |
-| `prompt_file`              | string    |                   | Path to a prompt file (mutually exclusive with `prompt`)                |
-| `allowed_tools`            | string    | see below         | Comma-separated list of tools Claude may use                            |
-| `disallowed_tools`         | string    |                   | Comma-separated list of tools Claude may not use                        |
-| `max_turns`                | string    |                   | Maximum conversation turns (default: no limit)                          |
-| `mcp_config`               | string    |                   | Path to an MCP config JSON file                                         |
-| `system_prompt`            | multiLine |                   | Override the system prompt                                              |
-| `append_system_prompt`     | multiLine |                   | Append to the default system prompt                                     |
-| `reviewer_terraform`       | boolean   | `false`           | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files |
-| `reviewer_yaml`            | boolean   | `false`           | Inject YAML/Kubernetes review standards; reads modified `.yaml` files   |
-| `reviewer_helm`            | boolean   | `false`           | Inject Helm chart review standards; reads modified chart files          |
-| `reviewer_cilium`          | boolean   | `false`           | Inject Cilium network policy review standards; reads modified CNP files |
-| `reviewer_dockerfile`      | boolean   | `false`           | Inject Dockerfile review standards; reads modified Dockerfiles          |
-| `reviewer_dotnet_core`     | boolean   | `false`           | Inject .NET Core review standards; reads modified `.cs`/`.csproj` files |
-| `reviewer_golang`          | boolean   | `false`           | Inject Go review standards; reads modified `.go` files                  |
-| `reviewer_java`            | boolean   | `false`           | Inject Java review standards; reads modified `.java` files              |
-| `reviewer_javascript`      | boolean   | `false`           | Inject JavaScript review standards; reads modified `.js`/`.mjs`/`.cjs`  |
-| `reviewer_nextjs`          | boolean   | `false`           | Inject Next.js review standards; reads modified `.tsx`/`.ts` files      |
-| `reviewer_php`             | boolean   | `false`           | Inject PHP review standards; reads modified `.php` files                |
-| `reviewer_powershell_core` | boolean   | `false`           | Inject PowerShell review standards; reads modified `.ps1`/`.psm1` files |
-| `reviewer_python`          | boolean   | `false`           | Inject Python review standards; reads modified `.py` files              |
-| `reviewer_rust`            | boolean   | `false`           | Inject Rust review standards; reads modified `.rs` files                |
-| `reviewer_sql`             | boolean   | `false`           | Inject SQL review standards; reads modified `.sql` files                |
-| `reviewer_typescript`      | boolean   | `false`           | Inject TypeScript review standards; reads modified `.ts`/`.tsx` files   |
-| `model`                    | string    | see below         | Model identifier (provider-specific format)                             |
-| `fallback_model`           | string    |                   | Fallback model when the primary is unavailable                          |
-| `claude_env`               | multiLine |                   | Custom environment variables (`KEY: VALUE` per line)                    |
-| `timeout_minutes`          | string    | `10`              | Execution timeout in minutes                                            |
-| `install_claude_cli`       | boolean   | `true`            | Install Claude CLI if absent; set to `false` when pre-installed         |
-| `use_node_cache`           | boolean   | `false`           | Cache Node.js dependencies (only for Node.js projects with lock files)  |
-| `post_pr_comments`         | boolean   | `true`            | Post issues as inline PR threads; requires `System.AccessToken`         |
-| `minimum_severity`         | pickList  | `WARNING`         | Minimum severity to post: `CRITICAL`, `WARNING`, or `SUGGESTION`        |
-| `anthropic_api_key`        | string    |                   | Anthropic API key                                                       |
-| `claude_code_oauth_token`  | string    |                   | Claude Code OAuth token (alternative to API key)                        |
-| `use_bedrock`              | boolean   | `false`           | Route requests through AWS Bedrock                                      |
-| `use_vertex`               | boolean   | `false`           | Route requests through Google Vertex AI                                 |
-| `aws_region`               | string    |                   | AWS region (required when `use_bedrock: true`)                          |
-| `gcp_project_id`           | string    |                   | GCP project ID (required when `use_vertex: true`)                       |
-| `gcp_region`               | string    |                   | GCP region (required when `use_vertex: true`)                           |
-| `s3_state_bucket`          | string    |                   | S3 bucket for PR review state caching (opt-in; leave empty to disable)  |
-| `s3_state_prefix`          | string    | `claude-pr-state` | S3 key prefix for state objects                                         |
+| Input                        | Type      | Default           | Description                                                                               |
+| ---------------------------- | --------- | ----------------- | ----------------------------------------------------------------------------------------- |
+| `prompt`                     | multiLine |                   | Inline prompt (mutually exclusive with `prompt_file`)                                     |
+| `prompt_file`                | string    |                   | Path to a prompt file (mutually exclusive with `prompt`)                                  |
+| `allowed_tools`              | string    | see below         | Comma-separated list of tools Claude may use                                              |
+| `disallowed_tools`           | string    |                   | Comma-separated list of tools Claude may not use                                          |
+| `max_turns`                  | string    |                   | Maximum conversation turns (default: no limit)                                            |
+| `mcp_config`                 | string    |                   | Path to an MCP config JSON file                                                           |
+| `system_prompt`              | multiLine |                   | Override the system prompt                                                                |
+| `append_system_prompt`       | multiLine |                   | Append to the default system prompt                                                       |
+| `reviewer_terraform`         | boolean   | `false`           | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files                   |
+| `reviewer_yaml`              | boolean   | `false`           | Inject YAML/Kubernetes review standards; reads modified `.yaml` files                     |
+| `reviewer_helm`              | boolean   | `false`           | Inject Helm chart review standards; reads modified chart files                            |
+| `reviewer_cilium`            | boolean   | `false`           | Inject Cilium network policy review standards; reads modified CNP files                   |
+| `reviewer_dockerfile`        | boolean   | `false`           | Inject Dockerfile review standards; reads modified Dockerfiles                            |
+| `reviewer_dotnet_core`       | boolean   | `false`           | Inject .NET Core review standards; reads modified `.cs`/`.csproj` files                   |
+| `reviewer_golang`            | boolean   | `false`           | Inject Go review standards; reads modified `.go` files                                    |
+| `reviewer_java`              | boolean   | `false`           | Inject Java review standards; reads modified `.java` files                                |
+| `reviewer_javascript`        | boolean   | `false`           | Inject JavaScript review standards; reads modified `.js`/`.mjs`/`.cjs`                    |
+| `reviewer_nextjs`            | boolean   | `false`           | Inject Next.js review standards; reads modified `.tsx`/`.ts` files                        |
+| `reviewer_php`               | boolean   | `false`           | Inject PHP review standards; reads modified `.php` files                                  |
+| `reviewer_powershell_core`   | boolean   | `false`           | Inject PowerShell review standards; reads modified `.ps1`/`.psm1` files                   |
+| `reviewer_python`            | boolean   | `false`           | Inject Python review standards; reads modified `.py` files                                |
+| `reviewer_rust`              | boolean   | `false`           | Inject Rust review standards; reads modified `.rs` files                                  |
+| `reviewer_sql`               | boolean   | `false`           | Inject SQL review standards; reads modified `.sql` files                                  |
+| `reviewer_typescript`        | boolean   | `false`           | Inject TypeScript review standards; reads modified `.ts`/`.tsx` files                     |
+| `model`                      | string    | see below         | Model identifier (provider-specific format)                                               |
+| `fallback_model`             | string    |                   | Fallback model when the primary is unavailable                                            |
+| `claude_env`                 | multiLine |                   | Custom environment variables (`KEY: VALUE` per line)                                      |
+| `timeout_minutes`            | string    | `10`              | Execution timeout in minutes                                                              |
+| `install_claude_cli`         | boolean   | `true`            | Install Claude CLI if absent; set to `false` when pre-installed                           |
+| `use_node_cache`             | boolean   | `false`           | Cache Node.js dependencies (only for Node.js projects with lock files)                    |
+| `post_pr_comments`           | boolean   | `true`            | Post issues as inline PR threads; requires `System.AccessToken`                           |
+| `minimum_severity`           | pickList  | `WARNING`         | Minimum severity to post: `CRITICAL`, `WARNING`, or `SUGGESTION`                          |
+| `anthropic_api_key`          | string    |                   | Anthropic API key                                                                         |
+| `claude_code_oauth_token`    | string    |                   | Claude Code OAuth token (alternative to API key)                                          |
+| `use_bedrock`                | boolean   | `false`           | Route requests through AWS Bedrock                                                        |
+| `use_vertex`                 | boolean   | `false`           | Route requests through Google Vertex AI                                                   |
+| `aws_region`                 | string    |                   | AWS region (required when `use_bedrock: true`)                                            |
+| `gcp_project_id`             | string    |                   | GCP project ID (required when `use_vertex: true`)                                         |
+| `gcp_region`                 | string    |                   | GCP region (required when `use_vertex: true`)                                             |
+| `s3_state_bucket`            | string    |                   | S3 bucket for PR review state caching (opt-in; leave empty to disable)                    |
+| `s3_state_prefix`            | string    | `claude-pr-state` | S3 key prefix for state objects                                                           |
+| `azdo_pat`                   | string    |                   | PAT for posting PR comments and reviewer votes (see PR Review Comments)                   |
+| `reply_classification_model` | string    |                   | Model for classifying PR thread replies; defaults to the review model                     |
+| `approve_pr_on_no_issues`    | boolean   | `false`           | Approve the PR when no new issues found; set to waiting-for-author when issues are posted |
 
 `use_bedrock` and `use_vertex` are mutually exclusive.
 
@@ -112,11 +122,12 @@ By default `$(System.AccessToken)` is used, which attributes comments to the pip
 
 **1. Create a dedicated Entra ID user** (e.g. `claude-code-azdo-service-account@your-tenant.com`) and add it to your ADO project with at minimum the **Reader** role so it can access pull requests.
 
-**2. Sign in as that user and generate a PAT** with the following scope only:
+**2. Sign in as that user and generate a PAT** with the following scopes:
 
-| Scope                | Permission   |
-| -------------------- | ------------ |
-| Pull Request Threads | Read & Write |
+| Scope                | Permission   | Required for                                 |
+| -------------------- | ------------ | -------------------------------------------- |
+| Pull Request Threads | Read & Write | Posting review threads                       |
+| Code                 | Read & Write | PR approval vote (`approve_pr_on_no_issues`) |
 
 **3. Store the PAT** as a secret variable (e.g. `CLAUDE_CODE_AZDO_TOKEN`) in an ADO variable group or as a pipeline secret.
 
@@ -197,6 +208,26 @@ image: my-registry/app:latest # tag pinning handled by renovate
 
 This is version-controlled and permanent. Use it when you have consciously accepted a finding
 and want it suppressed for all future runs without relying on thread state.
+
+### Auto-approval
+
+When `approve_pr_on_no_issues: true`, the task votes on the PR after every review run:
+
+- **No new issues posted** → Approved ✅
+- **Issues posted** → Waiting for author ⏳
+
+This closes the review lifecycle automatically — once all issues are resolved (fixed, accepted, or suppressed), the next clean run approves the PR without manual intervention. The vote is attributed to the token owner (PAT or build service identity).
+
+Requires the `Code — Read & Write` PAT scope in addition to `Pull Request Threads — Read & Write`.
+
+```yaml
+- task: ClaudeCodeBaseTask@3
+  inputs:
+    reviewer_terraform: true
+    post_pr_comments: true
+    approve_pr_on_no_issues: true
+    azdo_pat: "$(CLAUDE_CODE_AZDO_TOKEN)"
+```
 
 ## S3 State Caching
 

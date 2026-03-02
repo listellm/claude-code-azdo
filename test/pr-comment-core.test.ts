@@ -5,15 +5,18 @@ import * as path from "path";
 import { EventEmitter } from "events";
 import {
   ACCEPT_KEYWORD,
+  approvePullRequest,
   extractIssues,
   fetchAcceptedFiles,
   fetchThreads,
   filterAcceptedIssues,
   fingerprintFile,
+  getCurrentUserId,
   issueFingerprint,
   normalizeFilePath,
   postIssueThread,
   REVIEW_ATTRIBUTION,
+  REVIEWER_VOTE,
   replyToThread,
   THREAD_STATUS,
   updateThreadStatus,
@@ -858,5 +861,231 @@ describe("filterAcceptedIssues", () => {
     const issues = [baseIssue()];
     const result = filterAcceptedIssues(issues, new Set(["foo.tf"]));
     expect(result).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REVIEWER_VOTE
+// ---------------------------------------------------------------------------
+
+describe("REVIEWER_VOTE", () => {
+  test("has expected values", () => {
+    expect(REVIEWER_VOTE.APPROVED).toBe(10);
+    expect(REVIEWER_VOTE.WAITING_FOR_AUTHOR).toBe(-5);
+    expect(REVIEWER_VOTE.NO_VOTE).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getCurrentUserId
+// ---------------------------------------------------------------------------
+
+describe("getCurrentUserId", () => {
+  const config: PrConfig = {
+    collectionUri: "https://dev.azure.com/myorg/",
+    project: "Platform",
+    repoId: "repo-abc",
+    prId: "42",
+    accessToken: "secret-token",
+  };
+
+  test("returns authenticatedUser.id on success", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      JSON.stringify({ authenticatedUser: { id: "user-guid-abc" } }),
+    );
+    const userId = await getCurrentUserId(config, requestFn);
+    expect(userId).toBe("user-guid-abc");
+  });
+
+  test("rejects when authenticatedUser.id is missing", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      JSON.stringify({ authenticatedUser: {} }),
+    );
+    await expect(getCurrentUserId(config, requestFn)).rejects.toThrow(
+      "connectionData response missing authenticatedUser.id",
+    );
+  });
+
+  test("rejects when authenticatedUser is missing entirely", async () => {
+    const { requestFn } = buildGetMock(200, JSON.stringify({}));
+    await expect(getCurrentUserId(config, requestFn)).rejects.toThrow(
+      "connectionData response missing authenticatedUser.id",
+    );
+  });
+
+  test("rejects when response is not valid JSON", async () => {
+    const { requestFn } = buildGetMock(200, "not json");
+    await expect(getCurrentUserId(config, requestFn)).rejects.toThrow(
+      "Failed to parse connectionData response",
+    );
+  });
+
+  test("rejects on network error", async () => {
+    const { requestFn } = buildErrorMock();
+    await expect(getCurrentUserId(config, requestFn)).rejects.toThrow(
+      "Network failure",
+    );
+  });
+
+  test("sends GET to /_apis/connectionData with Basic auth", async () => {
+    const capturedOptions: unknown[] = [];
+    const { requestFn } = buildGetMock(
+      200,
+      JSON.stringify({ authenticatedUser: { id: "user-guid-abc" } }),
+    );
+
+    const capturingFn = ((options: unknown, callback?: unknown) => {
+      capturedOptions.push(options);
+      return (requestFn as unknown as (o: unknown, c?: unknown) => unknown)(
+        options,
+        callback,
+      );
+    }) as unknown as RequestFn;
+
+    await getCurrentUserId(config, capturingFn);
+
+    const callOptions = capturedOptions[0] as {
+      path: string;
+      method: string;
+      headers: Record<string, string>;
+    };
+    expect(callOptions.path).toContain("/_apis/connectionData");
+    expect(callOptions.method).toBe("GET");
+    const expectedToken = Buffer.from(":secret-token").toString("base64");
+    expect(callOptions.headers["Authorization"]).toBe(`Basic ${expectedToken}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// approvePullRequest
+// ---------------------------------------------------------------------------
+
+describe("approvePullRequest", () => {
+  const config: PrConfig = {
+    collectionUri: "https://dev.azure.com/myorg/",
+    project: "Platform",
+    repoId: "repo-abc",
+    prId: "42",
+    accessToken: "secret-token",
+  };
+
+  /**
+   * Builds a requestFn that returns a different response for each sequential
+   * call. Calls beyond the provided responses will reject.
+   */
+  function buildSequentialMock(
+    responses: Array<{
+      statusCode: number;
+      body: string;
+      hasWrite?: boolean;
+    }>,
+  ): {
+    requestFn: RequestFn;
+    capturedOptions: unknown[];
+    capturedBodies: string[];
+  } {
+    let callIndex = 0;
+    const capturedOptions: unknown[] = [];
+    const capturedBodies: string[] = [];
+
+    const requestFn = ((
+      options: unknown,
+      callback?: (res: unknown) => void,
+    ) => {
+      const idx = callIndex++;
+      const resp = responses[idx];
+      capturedOptions.push(options);
+
+      if (!resp) {
+        const reqMock = Object.assign(new EventEmitter(), {
+          write: vi.fn(),
+          end: vi.fn(() => {
+            setImmediate(() => {
+              reqMock.emit("error", new Error("No more mock responses"));
+            });
+          }),
+        });
+        return reqMock;
+      }
+
+      const responseMock = new EventEmitter() as EventEmitter & {
+        statusCode: number;
+      };
+      responseMock.statusCode = resp.statusCode;
+
+      const reqMock = Object.assign(new EventEmitter(), {
+        write: vi.fn((data: string) => {
+          capturedBodies.push(data);
+        }),
+        end: vi.fn(() => {
+          setImmediate(() => {
+            responseMock.emit("data", Buffer.from(resp.body));
+            responseMock.emit("end");
+          });
+        }),
+      });
+
+      if (callback) callback(responseMock);
+      return reqMock;
+    }) as unknown as RequestFn;
+
+    return { requestFn, capturedOptions, capturedBodies };
+  }
+
+  test("sends PUT with vote in body to reviewers endpoint", async () => {
+    const { requestFn, capturedBodies } = buildSequentialMock([
+      {
+        statusCode: 200,
+        body: JSON.stringify({ authenticatedUser: { id: "user-guid" } }),
+      },
+      { statusCode: 200, body: "{}", hasWrite: true },
+    ]);
+
+    await approvePullRequest(config, 10, requestFn);
+
+    expect(capturedBodies).toHaveLength(1);
+    const body = JSON.parse(capturedBodies[0]!) as { vote: number };
+    expect(body.vote).toBe(10);
+  });
+
+  test("includes userId in URL path", async () => {
+    const { requestFn, capturedOptions } = buildSequentialMock([
+      {
+        statusCode: 200,
+        body: JSON.stringify({ authenticatedUser: { id: "user-guid" } }),
+      },
+      { statusCode: 200, body: "{}", hasWrite: true },
+    ]);
+
+    await approvePullRequest(config, -5, requestFn);
+
+    const putOptions = capturedOptions[1] as { path: string };
+    expect(putOptions.path).toContain("/reviewers/user-guid");
+  });
+
+  test("rejects when PUT returns non-2xx", async () => {
+    const { requestFn } = buildSequentialMock([
+      {
+        statusCode: 200,
+        body: JSON.stringify({ authenticatedUser: { id: "user-guid" } }),
+      },
+      { statusCode: 403, body: '{"message":"Forbidden"}' },
+    ]);
+
+    await expect(approvePullRequest(config, 10, requestFn)).rejects.toThrow(
+      "ADO API returned 403",
+    );
+  });
+
+  test("rejects when getCurrentUserId fails", async () => {
+    const { requestFn } = buildSequentialMock([
+      { statusCode: 200, body: JSON.stringify({ authenticatedUser: {} }) },
+    ]);
+
+    await expect(approvePullRequest(config, 10, requestFn)).rejects.toThrow(
+      "connectionData response missing authenticatedUser.id",
+    );
   });
 });
