@@ -74,6 +74,11 @@ async function run(): Promise<void> {
     if (tl.getBoolInput("reviewer_terraform", false))
       enabledReviewers.push("terraform");
     if (tl.getBoolInput("reviewer_yaml", false)) enabledReviewers.push("yaml");
+    if (tl.getBoolInput("reviewer_helm", false)) enabledReviewers.push("helm");
+    if (tl.getBoolInput("reviewer_cilium", false))
+      enabledReviewers.push("cilium");
+    if (tl.getBoolInput("reviewer_dockerfile", false))
+      enabledReviewers.push("dockerfile");
     const reviewerSystemPrompt = buildReviewerSystemPrompt(enabledReviewers);
 
     if (enabledReviewers.length > 0 && rawPrompt === "" && promptFile === "") {
