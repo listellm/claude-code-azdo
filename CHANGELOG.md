@@ -1,3 +1,9 @@
+## [3.4.0](https://github.com/listellm/claude-code-azdo/compare/v3.3.0...v3.4.0) (2026-03-02)
+
+### Features
+
+- add 11 language-specific code reviewers ([#26](https://github.com/listellm/claude-code-azdo/issues/26)) ([9b46ad1](https://github.com/listellm/claude-code-azdo/commit/9b46ad1b836532c34888550479434b43d59e0074))
+
 ## [3.3.0](https://github.com/listellm/claude-code-azdo/compare/v3.2.0...v3.3.0) (2026-03-02)
 
 ### Features
