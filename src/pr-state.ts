@@ -29,6 +29,8 @@ export interface PrState {
   promptHash: string;
   postedFingerprints: string[];
   files: Record<string, PrStateFile>;
+  threadMap: Record<string, number>;
+  pendingVerification: string[];
 }
 
 export interface S3Config {
@@ -84,6 +86,9 @@ export async function readPrState(
       );
       return null;
     }
+    // Backwards compat: fill in fields added after initial schema
+    parsed.threadMap = parsed.threadMap ?? {};
+    parsed.pendingVerification = parsed.pendingVerification ?? [];
     return parsed;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -270,6 +275,8 @@ export function deduplicateByFingerprints(
  * - Carries forward unchanged files from existing state
  * - Updates dirty files with new content hashes and issues
  * - Appends newly posted fingerprints, capped at MAX_FINGERPRINTS
+ * - Removes verified fingerprints from postedFingerprints
+ * - Stores updated threadMap and pendingVerification
  */
 export function buildUpdatedState(
   existing: PrState | null,
@@ -283,6 +290,9 @@ export function buildUpdatedState(
   dirtyFiles: string[],
   newIssues: ReviewIssue[],
   newlyPostedIssues: ReviewIssue[],
+  threadMap: Record<string, number> = {},
+  verifiedFingerprints: string[] = [],
+  pendingVerification: string[] = [],
 ): PrState {
   const dirtyFileSet = new Set(dirtyFiles);
 
@@ -305,8 +315,11 @@ export function buildUpdatedState(
     };
   }
 
-  // Append newly posted fingerprints, rotate oldest if over cap
-  const existingFingerprints = existing?.postedFingerprints ?? [];
+  // Remove verified fingerprints, then append newly posted ones
+  const verifiedSet = new Set(verifiedFingerprints);
+  const existingFingerprints = (existing?.postedFingerprints ?? []).filter(
+    (fp) => !verifiedSet.has(fp),
+  );
   const newFingerprints = newlyPostedIssues.map(issueFingerprint);
   const allFingerprints = [...existingFingerprints, ...newFingerprints];
   const cappedFingerprints =
@@ -325,5 +338,7 @@ export function buildUpdatedState(
     promptHash,
     postedFingerprints: cappedFingerprints,
     files,
+    threadMap,
+    pendingVerification,
   };
 }

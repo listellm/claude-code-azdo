@@ -6,8 +6,15 @@ import { runClaudeAzure } from "./azure-run-claude";
 import { setupAzureEnvironment } from "./azure-setup";
 import { setupClaudeCodeSettings } from "./setup-claude-code-settings";
 import { validateEnvironmentVariablesAzure } from "./azure-validate-env";
-import { postPrReviewComments } from "./azure-pr-comment";
-import { extractIssues, PR_ISSUES_INSTRUCTION } from "./pr-comment-core";
+import { postPrReviewComments, verifyFixedIssues } from "./azure-pr-comment";
+import {
+  extractIssues,
+  fetchThreads,
+  fingerprintFile,
+  PR_ISSUES_INSTRUCTION,
+  REVIEW_ATTRIBUTION,
+  type PrConfig,
+} from "./pr-comment-core";
 import {
   buildReviewerSystemPrompt,
   type ReviewerTypeKey,
@@ -22,6 +29,10 @@ import {
   type PrState,
   type S3Config,
 } from "./pr-state";
+import {
+  classifyThreadReplies,
+  type ClassifierConfig,
+} from "./thread-classifier";
 
 /**
  * Builds a PR context preamble from AzDo pipeline variables.
@@ -60,6 +71,19 @@ function buildPrPreamble(usingPromptFile: boolean): string {
   return lines.join("\n") + "\n\n";
 }
 
+/**
+ * Inverts a fingerprint → threadId map to threadId → fingerprint.
+ */
+function invertThreadMap(
+  threadMap: Record<string, number>,
+): Map<number, string> {
+  const inverted = new Map<number, string>();
+  for (const [fp, threadId] of Object.entries(threadMap)) {
+    inverted.set(threadId, fp);
+  }
+  return inverted;
+}
+
 async function run(): Promise<void> {
   try {
     await setupAzureEnvironment();
@@ -89,6 +113,10 @@ async function run(): Promise<void> {
     const minimumSeverity = (
       tl.getInput("minimum_severity", false) ?? "WARNING"
     ).toUpperCase();
+    const prCommentToken =
+      tl.getInput("azdo_pat", false) ||
+      tl.getVariable("System.AccessToken") ||
+      "";
     const userAppendSystemPrompt =
       tl.getInput("append_system_prompt", false) ?? undefined;
 
@@ -156,6 +184,96 @@ async function run(): Promise<void> {
     }
     // --- end S3 state caching setup ---
 
+    // --- Thread classification (reply intent detection) ---
+    const classificationModel =
+      tl.getInput("reply_classification_model", false) || modelId;
+    const anthropicApiKey = tl.getInput("anthropic_api_key", false) ?? "";
+    const useBedrock = tl.getBoolInput("use_bedrock", false);
+    const useVertex = tl.getBoolInput("use_vertex", false);
+    const awsRegionInput = tl.getInput("aws_region", false) ?? "";
+    const gcpProjectId = tl.getInput("gcp_project_id", false) ?? "";
+    const gcpRegion = tl.getInput("gcp_region", false) ?? "";
+
+    const classifierConfig: ClassifierConfig = {
+      apiKey: anthropicApiKey,
+      useBedrock,
+      useVertex,
+      awsRegion: awsRegionInput,
+      gcpProjectId,
+      gcpRegion,
+      model: classificationModel,
+    };
+
+    let acceptedFiles = new Set<string>();
+    let pendingVerification = [...(state?.pendingVerification ?? [])];
+    let existingThreadMap = { ...(state?.threadMap ?? {}) };
+
+    const repoId = tl.getVariable("Build.Repository.ID") ?? "";
+    if (postPrComments && prId && collectionUri && project && repoId) {
+      const prConfig: PrConfig = {
+        collectionUri,
+        project,
+        repoId,
+        prId,
+        accessToken: prCommentToken,
+      };
+
+      // Fetch all threads and classify replies (Claude-originated only)
+      // Dual check: commentType 1 (system/bot) + attribution content prevents spoofing
+      const allThreads = await fetchThreads(prConfig);
+      const threads = allThreads.filter((t) => {
+        const root = t.comments?.[0];
+        return (
+          root?.commentType === 1 && root?.content?.includes(REVIEW_ATTRIBUTION)
+        );
+      });
+
+      if (threads.length > 0) {
+        const classifications = await classifyThreadReplies(
+          threads,
+          classifierConfig,
+        );
+
+        // Process #accept intents (file-level suppression)
+        for (const c of classifications) {
+          if (c.intent === "accept") {
+            acceptedFiles.add(c.filePath);
+          }
+        }
+
+        // Process #fixed intents
+        const reverseThreadMap = invertThreadMap(existingThreadMap);
+        for (const c of classifications) {
+          if (c.intent === "fixed") {
+            const fp = reverseThreadMap.get(c.threadId);
+            if (fp && !pendingVerification.includes(fp)) {
+              pendingVerification.push(fp);
+            }
+          }
+        }
+
+        if (acceptedFiles.size > 0) {
+          console.log(
+            `Thread classification: ${acceptedFiles.size} file(s) accepted`,
+          );
+        }
+        const newFixed = classifications.filter(
+          (c) => c.intent === "fixed",
+        ).length;
+        if (newFixed > 0) {
+          console.log(
+            `Thread classification: ${newFixed} thread(s) marked as fixed`,
+          );
+          if (!s3Config) {
+            console.warn(
+              "Warning: #fixed verification requires S3 state caching (s3_state_bucket). Fixed intents will not be verified without it.",
+            );
+          }
+        }
+      }
+    }
+    // --- end thread classification ---
+
     const promptConfig = await preparePrompt({
       prompt: preamble + cachePreamble + rawPrompt,
       promptFile,
@@ -174,17 +292,73 @@ async function run(): Promise<void> {
     });
 
     let postedIssues: import("./pr-comment-core").ReviewIssue[] = [];
+    let newThreadMap: Record<string, number> = {};
 
     if (postPrComments && result.executionFile) {
       const postedFingerprints = state
         ? new Set(state.postedFingerprints)
         : undefined;
-      postedIssues = await postPrReviewComments(
+      const postResult = await postPrReviewComments(
         result.executionFile,
+        prCommentToken,
         minimumSeverity,
         postedFingerprints,
+        acceptedFiles.size > 0 ? acceptedFiles : undefined,
       );
+      postedIssues = postResult.posted;
+      newThreadMap = postResult.threadMap;
     }
+
+    // Merge thread maps (existing + newly posted)
+    const mergedThreadMap = { ...existingThreadMap, ...newThreadMap };
+
+    // Extract all issues once for both verification and S3 state
+    const allNewIssues =
+      postPrComments && result.executionFile
+        ? await extractIssues(result.executionFile, "SUGGESTION")
+        : [];
+
+    // --- Verify fixed issues ---
+    let verifiedFingerprints: string[] = [];
+    let remainingPending: string[] = [];
+
+    if (postPrComments && pendingVerification.length > 0 && allNewIssues) {
+      // Only verify fingerprints whose files were actually re-reviewed (dirty)
+      const dirtyFileSet = new Set(dirtyFiles);
+      const canVerify: string[] = [];
+      const deferVerification: string[] = [];
+
+      for (const fp of pendingVerification) {
+        const file = fingerprintFile(fp);
+        if (file === "" || dirtyFileSet.has(file)) {
+          canVerify.push(fp);
+        } else {
+          deferVerification.push(fp);
+        }
+      }
+
+      if (canVerify.length > 0) {
+        const { verified, stillPresent } = await verifyFixedIssues(
+          prCommentToken,
+          canVerify,
+          mergedThreadMap,
+          allNewIssues,
+        );
+        verifiedFingerprints = verified;
+
+        // Still-present issues: remove from pending (they've been checked)
+        const checkedSet = new Set([...verified, ...stillPresent]);
+        remainingPending = [
+          ...deferVerification,
+          ...canVerify.filter((fp) => !checkedSet.has(fp)),
+        ];
+      } else {
+        remainingPending = pendingVerification;
+      }
+    } else {
+      remainingPending = pendingVerification;
+    }
+    // --- end verification ---
 
     // Write updated S3 state after run
     if (
@@ -195,10 +369,6 @@ async function run(): Promise<void> {
       repoName &&
       result.executionFile
     ) {
-      const allNewIssues = await extractIssues(
-        result.executionFile,
-        "SUGGESTION",
-      );
       const updatedState = buildUpdatedState(
         state,
         prId,
@@ -211,6 +381,9 @@ async function run(): Promise<void> {
         dirtyFiles,
         allNewIssues,
         postedIssues,
+        mergedThreadMap,
+        verifiedFingerprints,
+        remainingPending,
       );
       await writePrState(s3Config, updatedState);
     }
