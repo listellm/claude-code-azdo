@@ -1,3 +1,9 @@
+## [3.0.2](https://github.com/listellm/claude-code-azdo/compare/v3.0.1...v3.0.2) (2026-03-02)
+
+### Bug Fixes
+
+- add repo name to S3 state key path ([#22](https://github.com/listellm/claude-code-azdo/issues/22)) ([3cb2d79](https://github.com/listellm/claude-code-azdo/commit/3cb2d793d3051a069930c36bc441473ef75238d0))
+
 ## [3.0.1](https://github.com/listellm/claude-code-azdo/compare/v3.0.0...v3.0.1) (2026-03-02)
 
 ### Bug Fixes
