@@ -1,3 +1,9 @@
+## [3.3.0](https://github.com/listellm/claude-code-azdo/compare/v3.2.0...v3.3.0) (2026-03-02)
+
+### Features
+
+- add bedrock-sdk for thread classification ([#25](https://github.com/listellm/claude-code-azdo/issues/25)) ([d6d84e4](https://github.com/listellm/claude-code-azdo/commit/d6d84e4ad3b7d71d7d7612266724331e6cf2adfb))
+
 ## [3.2.0](https://github.com/listellm/claude-code-azdo/compare/v3.1.0...v3.2.0) (2026-03-02)
 
 ### Features
