@@ -1,3 +1,9 @@
+## [3.7.0](https://github.com/listellm/claude-code-azdo/compare/v3.6.0...v3.7.0) (2026-03-02)
+
+### Features
+
+- rename azdo_pat to pr_review_token ([#29](https://github.com/listellm/claude-code-azdo/issues/29)) ([eb7b19d](https://github.com/listellm/claude-code-azdo/commit/eb7b19dd4ed262d7ab7896c3b6f4bcf0452b4da8))
+
 ## [3.6.0](https://github.com/listellm/claude-code-azdo/compare/v3.5.0...v3.6.0) (2026-03-02)
 
 ### Features
