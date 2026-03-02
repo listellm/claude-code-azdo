@@ -1,3 +1,9 @@
+## [3.5.0](https://github.com/listellm/claude-code-azdo/compare/v3.4.0...v3.5.0) (2026-03-02)
+
+### Features
+
+- add PR auto-approval, esbuild migration, and test coverage ([#27](https://github.com/listellm/claude-code-azdo/issues/27)) ([712a497](https://github.com/listellm/claude-code-azdo/commit/712a49797720da0f4ddded9776b69f7fa5d882ff))
+
 ## [3.4.0](https://github.com/listellm/claude-code-azdo/compare/v3.3.0...v3.4.0) (2026-03-02)
 
 ### Features
