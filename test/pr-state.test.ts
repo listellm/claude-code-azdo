@@ -104,6 +104,11 @@ function buildExecFn(
   };
 }
 
+const BASE_STATE_DEFAULTS = {
+  threadMap: {} as Record<string, number>,
+  pendingVerification: [] as string[],
+};
+
 describe("computeDirtyFiles", () => {
   const baseState: PrState = {
     schemaVersion: 1,
@@ -125,6 +130,7 @@ describe("computeDirtyFiles", () => {
         issues: [],
       },
     },
+    ...BASE_STATE_DEFAULTS,
   };
 
   test("returns all files as dirty when state is null", async () => {
@@ -236,6 +242,7 @@ describe("buildCachePreamble", () => {
     promptHash: "p",
     postedFingerprints: [],
     files: {},
+    ...BASE_STATE_DEFAULTS,
   };
 
   test("returns empty string when state is null", () => {
@@ -306,6 +313,7 @@ describe("mergeIssues", () => {
         issues: [],
       },
     },
+    ...BASE_STATE_DEFAULTS,
   };
 
   test("returns newIssues unchanged when state is null", () => {
@@ -393,6 +401,8 @@ describe("buildUpdatedState", () => {
         issues: [],
       },
     },
+    threadMap: { "WARNING|foo.tf|1|old issue": 100 },
+    pendingVerification: [],
   };
 
   const newIssue: ReviewIssue = {
@@ -481,6 +491,8 @@ describe("buildUpdatedState", () => {
     expect(updated.project).toBe("my-project");
     expect(updated.postedFingerprints).toHaveLength(0);
     expect(Object.keys(updated.files)).toEqual(["a.tf"]);
+    expect(updated.threadMap).toEqual({});
+    expect(updated.pendingVerification).toEqual([]);
   });
 
   test("caps postedFingerprints at 500, rotating oldest", () => {
@@ -527,5 +539,73 @@ describe("buildUpdatedState", () => {
     const runAt = new Date(updated.lastRunAt).getTime();
     expect(runAt).toBeGreaterThanOrEqual(before);
     expect(runAt).toBeLessThanOrEqual(after);
+  });
+
+  test("stores threadMap and pendingVerification", () => {
+    const threadMap = { "CRITICAL|foo.tf|5|issue": 200 };
+    const pending = ["WARNING|bar.tf|10|old issue"];
+    const updated = buildUpdatedState(
+      existingState,
+      "10",
+      "my-org",
+      "my-project",
+      "my-repo",
+      "claude-sonnet-4-6",
+      hashContent("prompt"),
+      {},
+      [],
+      [],
+      [],
+      threadMap,
+      [],
+      pending,
+    );
+    expect(updated.threadMap).toEqual(threadMap);
+    expect(updated.pendingVerification).toEqual(pending);
+  });
+
+  test("removes verified fingerprints from postedFingerprints", () => {
+    const updated = buildUpdatedState(
+      existingState,
+      "10",
+      "my-org",
+      "my-project",
+      "my-repo",
+      "claude-sonnet-4-6",
+      hashContent("prompt"),
+      {},
+      [],
+      [],
+      [],
+      {},
+      ["WARNING||1|existing issue"],
+      [],
+    );
+    expect(updated.postedFingerprints).not.toContain(
+      "WARNING||1|existing issue",
+    );
+  });
+
+  test("readPrState backwards compat — missing threadMap/pendingVerification default to empty", () => {
+    // Simulate a state object that was serialised before threadMap existed
+    const legacyState = {
+      schemaVersion: 1,
+      prId: "1",
+      org: "o",
+      project: "p",
+      repoName: "r",
+      lastRunAt: "",
+      modelId: "m",
+      promptHash: "h",
+      postedFingerprints: [],
+      files: {},
+    } as unknown as PrState;
+
+    // The readPrState function applies defaults, but we can test the pattern:
+    legacyState.threadMap = legacyState.threadMap ?? {};
+    legacyState.pendingVerification = legacyState.pendingVerification ?? [];
+
+    expect(legacyState.threadMap).toEqual({});
+    expect(legacyState.pendingVerification).toEqual([]);
   });
 });

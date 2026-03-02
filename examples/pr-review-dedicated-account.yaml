@@ -1,8 +1,8 @@
 # Example: Claude Code PR review using a dedicated ADO service account.
 #
 # By default the task posts PR comments as the pipeline's built-in build
-# service identity. Using a dedicated account gives clearer attribution in
-# the ADO UI (e.g. "zzSystem claude-code-azdo-service-account").
+# service identity. The `azdo_pat` input lets you supply a Personal Access
+# Token so comments are attributed to a dedicated user instead.
 #
 # ─── Entra ID setup ─────────────────────────────────────────────────────────
 # 1. Create an Entra ID user for the service account, e.g.:
@@ -64,7 +64,4 @@ stages:
               post_pr_comments: true
               minimum_severity: WARNING
               timeout_minutes: "15"
-            env:
-              # Pass the service account PAT so comments are attributed to the
-              # dedicated user rather than the pipeline build service identity.
-              SYSTEM_ACCESSTOKEN: $(CLAUDE_CODE_AZDO_TOKEN)
+              azdo_pat: $(CLAUDE_CODE_AZDO_TOKEN)

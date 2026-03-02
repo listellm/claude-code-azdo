@@ -1,7 +1,14 @@
 import * as https from "https";
 import { readFile } from "fs/promises";
 
-export const ACCEPT_KEYWORD = "/accept";
+export const ACCEPT_KEYWORD = "#accept";
+
+export const THREAD_STATUS = {
+  ACTIVE: 1,
+  FIXED: 2,
+  WONT_FIX: 3,
+  CLOSED: 4,
+} as const;
 
 export interface PrConfig {
   collectionUri: string;
@@ -45,13 +52,13 @@ Rules:
 - If a line contains a \`claude-ignore\` annotation in a code comment (any syntax: \`// claude-ignore\`, \`# claude-ignore\`, \`<!-- claude-ignore -->\`, \`-- claude-ignore\`, \`/* claude-ignore */\` etc.), do not include any issue for that line in the JSON output.
 `.trim();
 
-const REVIEW_ATTRIBUTION = "🤖 **Claude Code CI Review**";
+export const REVIEW_ATTRIBUTION = "🤖 **Claude Code CI Review**";
 
 const REVIEW_HELP_FILE =
-  "---\n💡 Reply `/accept` to suppress all issues on this file in future runs · add `# claude-ignore` (or language equivalent) to the line to suppress permanently.";
+  "---\n💡 Reply `#accept` to suppress all issues on this file in future runs · reply `#fixed` when you've addressed the issue — Claude will verify and resolve the thread · add `# claude-ignore` (or language equivalent) to the line to suppress permanently.";
 
 const REVIEW_HELP_GENERAL =
-  "---\n💡 Reply `/accept` to suppress this on future runs.";
+  "---\n💡 Reply `#accept` to suppress this on future runs · reply `#fixed` when you've addressed the issue — Claude will verify and resolve the thread.";
 
 const SEVERITY_RANK: Record<string, number> = {
   SUGGESTION: 1,
@@ -161,9 +168,9 @@ export function postIssueThread(
   config: PrConfig,
   issue: ReviewIssue,
   requestFn: RequestFn = https.request,
-): Promise<void> {
+): Promise<number> {
   const org = config.collectionUri.replace(/\/$/, "");
-  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${config.prId}/threads?api-version=7.1`;
+  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${encodeURIComponent(config.prId)}/threads?api-version=7.1`;
 
   const severityLabel = `[${issue.severity}]`;
 
@@ -175,7 +182,7 @@ export function postIssueThread(
         commentType: 1,
       },
     ],
-    status: 1, // active
+    status: THREAD_STATUS.ACTIVE,
   };
 
   if (issue.file && issue.line !== undefined) {
@@ -190,7 +197,215 @@ export function postIssueThread(
   const token = Buffer.from(`:${config.accessToken}`).toString("base64");
   const parsedUrl = new URL(url);
 
-  return new Promise((resolve, reject) => {
+  return new Promise<number>((resolve, reject) => {
+    const req = requestFn(
+      {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+          Authorization: `Basic ${token}`,
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on("end", () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const parsed = JSON.parse(data) as { id?: number };
+              resolve(parsed.id ?? 0);
+            } catch {
+              resolve(0);
+            }
+          } else {
+            reject(
+              new Error(
+                `ADO API returned ${res.statusCode}: ${data.slice(0, 200)}`,
+              ),
+            );
+          }
+        });
+      },
+    );
+
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+export function normalizeFilePath(p: string): string {
+  return p.startsWith("/") ? p.slice(1) : p;
+}
+
+export interface ThreadComment {
+  id?: number;
+  content?: string;
+  author?: { displayName?: string; id?: string };
+  commentType?: number;
+}
+
+export interface PrThread {
+  id?: number;
+  status?: number;
+  threadContext?: { filePath?: string };
+  comments?: ThreadComment[];
+}
+
+export interface ThreadListResponse {
+  value: PrThread[];
+}
+
+/**
+ * GETs all threads on the PR.
+ * Non-throwing — returns empty array on any error.
+ */
+export async function fetchThreads(
+  config: PrConfig,
+  requestFn: RequestFn = https.request,
+): Promise<PrThread[]> {
+  const org = config.collectionUri.replace(/\/$/, "");
+  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${encodeURIComponent(config.prId)}/threads?api-version=7.1`;
+  const token = Buffer.from(`:${config.accessToken}`).toString("base64");
+  const parsedUrl = new URL(url);
+
+  return new Promise<PrThread[]>((resolve) => {
+    const req = requestFn(
+      {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${token}`,
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(data) as ThreadListResponse;
+            resolve(parsed.value ?? []);
+          } catch {
+            console.warn("fetchThreads: failed to parse thread list response");
+            resolve([]);
+          }
+        });
+      },
+    );
+
+    req.on("error", (err: Error) => {
+      console.warn(`fetchThreads: request failed — ${err.message}`);
+      resolve([]);
+    });
+    req.end();
+  });
+}
+
+/**
+ * GETs all threads on the PR and returns the set of file paths for which
+ * any thread comment contains the ACCEPT_KEYWORD (case-insensitive, trimmed).
+ * File paths are normalised (no leading slash).
+ * An empty string ("") represents general (no-file) threads.
+ * Non-throwing — returns empty Set on any error.
+ */
+export async function fetchAcceptedFiles(
+  config: PrConfig,
+  requestFn: RequestFn = https.request,
+): Promise<Set<string>> {
+  const threads = await fetchThreads(config, requestFn);
+  const accepted = new Set<string>();
+  for (const thread of threads) {
+    const hasAccept = thread.comments?.some((c) =>
+      c.content?.trim().toLowerCase().includes(ACCEPT_KEYWORD.toLowerCase()),
+    );
+    if (hasAccept) {
+      accepted.add(normalizeFilePath(thread.threadContext?.filePath ?? ""));
+    }
+  }
+  return accepted;
+}
+
+/**
+ * PATCHes the status of a PR thread.
+ * Status values: 1=active, 2=fixed, 3=wontFix, 4=closed.
+ */
+export function updateThreadStatus(
+  config: PrConfig,
+  threadId: number,
+  status: number,
+  requestFn: RequestFn = https.request,
+): Promise<void> {
+  const org = config.collectionUri.replace(/\/$/, "");
+  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${encodeURIComponent(config.prId)}/threads/${threadId}?api-version=7.1`;
+  const body = JSON.stringify({ status });
+  const token = Buffer.from(`:${config.accessToken}`).toString("base64");
+  const parsedUrl = new URL(url);
+
+  return new Promise<void>((resolve, reject) => {
+    const req = requestFn(
+      {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+          Authorization: `Basic ${token}`,
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on("end", () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve();
+          } else {
+            reject(
+              new Error(
+                `ADO API returned ${res.statusCode}: ${data.slice(0, 200)}`,
+              ),
+            );
+          }
+        });
+      },
+    );
+
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
+ * Posts a reply comment to an existing PR thread.
+ */
+export function replyToThread(
+  config: PrConfig,
+  threadId: number,
+  content: string,
+  requestFn: RequestFn = https.request,
+): Promise<void> {
+  const org = config.collectionUri.replace(/\/$/, "");
+  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${encodeURIComponent(config.prId)}/threads/${threadId}/comments?api-version=7.1`;
+  const body = JSON.stringify({
+    content,
+    parentCommentId: 0,
+    commentType: 1,
+  });
+  const token = Buffer.from(`:${config.accessToken}`).toString("base64");
+  const parsedUrl = new URL(url);
+
+  return new Promise<void>((resolve, reject) => {
     const req = requestFn(
       {
         hostname: parsedUrl.hostname,
@@ -227,84 +442,6 @@ export function postIssueThread(
   });
 }
 
-function normalizeFilePath(p: string): string {
-  return p.startsWith("/") ? p.slice(1) : p;
-}
-
-interface ThreadListResponse {
-  value: Array<{
-    threadContext?: { filePath?: string };
-    comments?: Array<{ content?: string }>;
-  }>;
-}
-
-/**
- * GETs all threads on the PR and returns the set of file paths for which
- * any thread comment contains the ACCEPT_KEYWORD (case-insensitive, trimmed).
- * File paths are normalised (no leading slash).
- * An empty string ("") represents general (no-file) threads.
- * Non-throwing — returns empty Set on any error.
- */
-export async function fetchAcceptedFiles(
-  config: PrConfig,
-  requestFn: RequestFn = https.request,
-): Promise<Set<string>> {
-  const org = config.collectionUri.replace(/\/$/, "");
-  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${config.prId}/threads?api-version=7.1`;
-  const token = Buffer.from(`:${config.accessToken}`).toString("base64");
-  const parsedUrl = new URL(url);
-
-  return new Promise<Set<string>>((resolve) => {
-    const req = requestFn(
-      {
-        hostname: parsedUrl.hostname,
-        path: parsedUrl.pathname + parsedUrl.search,
-        method: "GET",
-        headers: {
-          Authorization: `Basic ${token}`,
-        },
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk: Buffer) => {
-          data += chunk.toString();
-        });
-        res.on("end", () => {
-          try {
-            const parsed = JSON.parse(data) as ThreadListResponse;
-            const accepted = new Set<string>();
-            for (const thread of parsed.value) {
-              const hasAccept = thread.comments?.some((c) =>
-                c.content
-                  ?.trim()
-                  .toLowerCase()
-                  .includes(ACCEPT_KEYWORD.toLowerCase()),
-              );
-              if (hasAccept) {
-                accepted.add(
-                  normalizeFilePath(thread.threadContext?.filePath ?? ""),
-                );
-              }
-            }
-            resolve(accepted);
-          } catch {
-            console.warn(
-              "fetchAcceptedFiles: failed to parse thread list response",
-            );
-            resolve(new Set());
-          }
-        });
-      },
-    );
-
-    req.on("error", (err: Error) => {
-      console.warn(`fetchAcceptedFiles: request failed — ${err.message}`);
-      resolve(new Set());
-    });
-    req.end();
-  });
-}
-
 export function filterAcceptedIssues(
   issues: ReviewIssue[],
   acceptedFiles: Set<string>,
@@ -320,4 +457,16 @@ export function filterAcceptedIssues(
  */
 export function issueFingerprint(issue: ReviewIssue): string {
   return `${issue.severity}|${issue.file ?? ""}|${issue.line ?? ""}|${issue.description}`;
+}
+
+/**
+ * Extracts the file segment from a fingerprint string.
+ * Uses indexOf (not split) so descriptions containing "|" are handled safely.
+ */
+export function fingerprintFile(fingerprint: string): string {
+  const firstPipe = fingerprint.indexOf("|");
+  if (firstPipe === -1) return "";
+  const secondPipe = fingerprint.indexOf("|", firstPipe + 1);
+  if (secondPipe === -1) return "";
+  return fingerprint.slice(firstPipe + 1, secondPipe);
 }
