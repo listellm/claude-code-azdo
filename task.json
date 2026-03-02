@@ -335,11 +335,11 @@
       "helpMarkDown": "S3 key prefix for state objects. Defaults to 'claude-pr-state'. Only used when s3_state_bucket is set."
     },
     {
-      "name": "azdo_pat",
+      "name": "pr_review_token",
       "type": "string",
-      "label": "Azure DevOps PAT",
+      "label": "PR Review Token",
       "required": false,
-      "helpMarkDown": "Personal Access Token used to post PR review comments. When provided, comments are attributed to the token owner instead of the pipeline build service identity. Requires 'Pull Request Threads — Read & Write' scope. When 'approve_pr_on_no_issues' is enabled, also requires 'Code — Read & Write' scope for reviewer votes. Falls back to System.AccessToken when not set."
+      "helpMarkDown": "Personal Access Token used for PR review operations (posting comments, updating thread status, reviewer votes). Comments are attributed to the token owner. Requires 'Pull Request Threads — Read & Write' scope. When 'approve_pr_on_no_issues' is enabled, also requires 'Code — Read & Write' scope. Falls back to System.AccessToken when not set."
     },
     {
       "name": "reply_classification_model",

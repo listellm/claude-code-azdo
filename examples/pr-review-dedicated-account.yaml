@@ -1,7 +1,7 @@
 # Example: Claude Code PR review using a dedicated ADO service account.
 #
 # By default the task posts PR comments as the pipeline's built-in build
-# service identity. The `azdo_pat` input lets you supply a Personal Access
+# service identity. The `pr_review_token` input lets you supply a Personal Access
 # Token so comments are attributed to a dedicated user instead.
 #
 # ─── Entra ID setup ─────────────────────────────────────────────────────────
@@ -64,4 +64,4 @@ stages:
               post_pr_comments: true
               minimum_severity: WARNING
               timeout_minutes: "15"
-              azdo_pat: $(CLAUDE_CODE_AZDO_TOKEN)
+              pr_review_token: $(CLAUDE_CODE_AZDO_TOKEN)

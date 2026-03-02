@@ -93,7 +93,7 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 | `gcp_region`                 | string    |                   | GCP region (required when `use_vertex: true`)                                             |
 | `s3_state_bucket`            | string    |                   | S3 bucket for PR review state caching (opt-in; leave empty to disable)                    |
 | `s3_state_prefix`            | string    | `claude-pr-state` | S3 key prefix for state objects                                                           |
-| `azdo_pat`                   | string    |                   | PAT for posting PR comments and reviewer votes (see PR Review Comments)                   |
+| `pr_review_token`            | string    |                   | PAT for posting PR comments and reviewer votes (see PR Review Comments)                   |
 | `reply_classification_model` | string    |                   | Model for classifying PR thread replies; defaults to the review model                     |
 | `approve_pr_on_no_issues`    | boolean   | `false`           | Approve the PR when no new issues found; set to waiting-for-author when issues are posted |
 
@@ -226,7 +226,7 @@ Requires the `Code — Read & Write` PAT scope in addition to `Pull Request Thre
     reviewer_terraform: true
     post_pr_comments: true
     approve_pr_on_no_issues: true
-    azdo_pat: "$(CLAUDE_CODE_AZDO_TOKEN)"
+    pr_review_token: "$(CLAUDE_CODE_AZDO_TOKEN)"
 ```
 
 ## S3 State Caching
