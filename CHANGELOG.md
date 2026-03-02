@@ -1,3 +1,9 @@
+## [2.1.1](https://github.com/listellm/claude-code-azdo/compare/v2.1.0...v2.1.1) (2026-03-02)
+
+### Bug Fixes
+
+- remove invalid visibleRule from minimum_severity input ([#19](https://github.com/listellm/claude-code-azdo/issues/19)) ([da5b02e](https://github.com/listellm/claude-code-azdo/commit/da5b02e2228408532a4a88a447cdae148dfcf788))
+
 ## [2.1.0](https://github.com/listellm/claude-code-azdo/compare/v2.0.0...v2.1.0) (2026-03-02)
 
 ### Features
