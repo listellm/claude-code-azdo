@@ -27,7 +27,7 @@ pnpm run create:vsix
 ## Quick Start
 
 ```yaml
-- task: ClaudeCodeBaseTask@1
+- task: ClaudeCodeBaseTask@2
   displayName: "Run Claude Code"
   inputs:
     prompt: "Review this codebase and suggest improvements."
@@ -75,7 +75,7 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 ### Anthropic API (default)
 
 ```yaml
-- task: ClaudeCodeBaseTask@1
+- task: ClaudeCodeBaseTask@2
   inputs:
     prompt: "..."
     anthropic_api_key: "$(ANTHROPIC_API_KEY)"
@@ -86,7 +86,7 @@ Store the key as a secret pipeline variable or in Azure Key Vault.
 ### OAuth token
 
 ```yaml
-- task: ClaudeCodeBaseTask@1
+- task: ClaudeCodeBaseTask@2
   inputs:
     prompt: "..."
     claude_code_oauth_token: "$(CLAUDE_CODE_OAUTH_TOKEN)"
@@ -94,19 +94,42 @@ Store the key as a secret pipeline variable or in Azure Key Vault.
 
 ### AWS Bedrock
 
+**IRSA / Pod Identity (preferred)** — when the agent pod is annotated with an IAM role,
+the AWS SDK credential chain resolves credentials automatically. No static keys needed:
+
+```yaml
+steps:
+  - task: ClaudeCodeBaseTask@2
+    inputs:
+      prompt: "..."
+      use_bedrock: true
+      aws_region: "us-east-1"
+      model: "us.anthropic.claude-sonnet-4-5-20251001-v1:0"
+```
+
+See [`examples/pr-review-bedrock-irsa.yaml`](./examples/pr-review-bedrock-irsa.yaml) for
+the full Kubernetes service account annotation and IAM trust policy setup.
+
+**Static keys (fallback)** — if you are not using IRSA or Pod Identity, pass credentials
+via pipeline variables. Both `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` must be set
+together:
+
 ```yaml
 variables:
   AWS_ACCESS_KEY_ID: $(aws-access-key-id)
   AWS_SECRET_ACCESS_KEY: $(aws-secret-access-key)
 
 steps:
-  - task: ClaudeCodeBaseTask@1
+  - task: ClaudeCodeBaseTask@2
     inputs:
       prompt: "..."
       use_bedrock: true
       aws_region: "us-east-1"
       model: "anthropic.claude-3-7-sonnet-20250219-v1:0"
 ```
+
+See [`examples/iam/bedrock-permissions.json`](./examples/iam/bedrock-permissions.json) for
+the required IAM permissions policy.
 
 ### Google Vertex AI
 
@@ -115,7 +138,7 @@ variables:
   GOOGLE_APPLICATION_CREDENTIALS: $(google-application-credentials)
 
 steps:
-  - task: ClaudeCodeBaseTask@1
+  - task: ClaudeCodeBaseTask@2
     inputs:
       prompt: "..."
       use_vertex: true
@@ -130,7 +153,7 @@ Pass extra environment variables to Claude's execution context using `KEY: VALUE
 (one per line, colon-separated — not `KEY=VALUE`):
 
 ```yaml
-- task: ClaudeCodeBaseTask@1
+- task: ClaudeCodeBaseTask@2
   inputs:
     prompt: "..."
     anthropic_api_key: "$(ANTHROPIC_API_KEY)"
@@ -143,7 +166,7 @@ Pass extra environment variables to Claude's execution context using `KEY: VALUE
 ## Using Output Variables
 
 ```yaml
-- task: ClaudeCodeBaseTask@1
+- task: ClaudeCodeBaseTask@2
   name: claudeTask
   inputs:
     prompt: "..."

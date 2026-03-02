@@ -96,7 +96,7 @@ stages:
               EOF
             displayName: "Create Analysis Prompt"
 
-          - task: ClaudeCodeBaseTask@1
+          - task: ClaudeCodeBaseTask@2
             displayName: "Run Claude Code Analysis"
             inputs:
               prompt_file: "$(Agent.TempDirectory)/claude-prompts/analysis-prompt.txt"
@@ -121,7 +121,7 @@ stages:
             inputs:
               versionSpec: "22.x"
 
-          - task: ClaudeCodeBaseTask@1
+          - task: ClaudeCodeBaseTask@2
             displayName: "Security Analysis"
             inputs:
               prompt: |
@@ -156,7 +156,7 @@ stages:
             inputs:
               versionSpec: "22.x"
 
-          - task: ClaudeCodeBaseTask@1
+          - task: ClaudeCodeBaseTask@2
             displayName: "Claude via Bedrock"
             inputs:
               prompt: "Analyse this codebase and provide suggestions for improvement."
@@ -177,7 +177,7 @@ stages:
             inputs:
               versionSpec: "22.x"
 
-          - task: ClaudeCodeBaseTask@1
+          - task: ClaudeCodeBaseTask@2
             displayName: "Claude via Vertex AI"
             inputs:
               prompt: "Review this codebase for potential improvements and best practices."

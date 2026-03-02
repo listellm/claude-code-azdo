@@ -16,8 +16,8 @@ export function validateEnvironmentVariablesAzure(): void {
     claudeCodeOAuthToken:
       tl.getInput("claude_code_oauth_token", false) ?? undefined,
     awsRegion: tl.getInput("aws_region", false) ?? undefined,
-    awsAccessKeyId: tl.getVariable("AWS_ACCESS_KEY_ID") ?? "",
-    awsSecretAccessKey: tl.getVariable("AWS_SECRET_ACCESS_KEY") ?? "",
+    awsAccessKeyId: tl.getVariable("AWS_ACCESS_KEY_ID") ?? undefined,
+    awsSecretAccessKey: tl.getVariable("AWS_SECRET_ACCESS_KEY") ?? undefined,
     vertexProjectId: tl.getInput("gcp_project_id", false) ?? undefined,
     vertexRegion: tl.getInput("gcp_region", false) ?? undefined,
     googleApplicationCredentials:

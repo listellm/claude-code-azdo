@@ -1,0 +1,45 @@
+# Example: Claude Code PR review using the Anthropic API directly.
+#
+# Prerequisites:
+#   - A variable group named "claude-secrets" containing:
+#       anthropic_api_key  (secret, from https://console.anthropic.com)
+#
+# The task posts inline PR thread comments for any issues found
+# (requires System.AccessToken, which is available by default on hosted/self-hosted agents).
+
+trigger: none
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  name: your-agent-pool-name # replace with your agent pool
+
+variables:
+  - group: claude-secrets # must contain: anthropic_api_key
+
+stages:
+  - stage: ClaudeCodeReview
+    displayName: "Claude Code PR Review"
+    jobs:
+      - job: Review
+        displayName: "AI code review"
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            displayName: "Checkout with full history"
+
+          - task: ClaudeCodeBaseTask@2
+            displayName: "Run Claude Code review"
+            inputs:
+              anthropic_api_key: $(anthropic_api_key)
+              # model defaults to claude-sonnet-4-6; override if needed:
+              # model: claude-opus-4-6
+              prompt: |
+                Review the changes in this pull request.
+                Focus on correctness, security, and adherence to project conventions.
+                Report any issues found.
+              post_pr_comments: true
+              timeout_minutes: "15"

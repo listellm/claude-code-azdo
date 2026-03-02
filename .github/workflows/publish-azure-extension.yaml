@@ -166,7 +166,7 @@ jobs:
 
             ### 🔧 Usage
             ```yaml
-            - task: ClaudeCodeBaseTask@1
+            - task: ClaudeCodeBaseTask@2
               inputs:
                 prompt: 'Your prompt here'
                 anthropic_api_key: '$(ANTHROPIC_API_KEY)'

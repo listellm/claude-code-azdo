@@ -224,7 +224,7 @@ function printDeploymentInstructions() {
   );
 
   console.log("\n9. Use in your pipeline:");
-  console.log("   - task: ClaudeCodeBaseTask@1");
+  console.log("   - task: ClaudeCodeBaseTask@2");
   console.log("     inputs:");
   console.log('       prompt: "Your prompt here"');
   console.log('       anthropic_api_key: "$(ANTHROPIC_API_KEY)"');

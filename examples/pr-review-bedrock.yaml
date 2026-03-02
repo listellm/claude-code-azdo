@@ -1,0 +1,55 @@
+# Example: Claude Code PR review using AWS Bedrock (cross-region inference).
+#
+# Prerequisites:
+#   - A variable group named "claude-bedrock-secrets" containing:
+#       AWS_ACCESS_KEY_ID      (secret)
+#       AWS_SECRET_ACCESS_KEY  (secret)
+#   - The IAM identity must have bedrock:InvokeModel permission on the target model.
+#
+# Model ID format for Bedrock cross-region inference:
+#   us.anthropic.claude-sonnet-4-5-20251001-v1:0
+#   us.anthropic.claude-opus-4-5-20251001-v1:0
+#
+# See: https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+
+trigger: none
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  name: your-agent-pool-name # replace with your agent pool
+
+variables:
+  - group: claude-bedrock-secrets # must contain: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+
+stages:
+  - stage: ClaudeCodeReview
+    displayName: "Claude Code PR Review (Bedrock)"
+    jobs:
+      - job: Review
+        displayName: "AI code review via AWS Bedrock"
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            displayName: "Checkout with full history"
+
+          - task: ClaudeCodeBaseTask@2
+            displayName: "Run Claude Code review"
+            env:
+              # Bedrock credentials are read from the environment by the task
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+            inputs:
+              use_bedrock: true
+              aws_region: us-east-1 # region must support Bedrock cross-region inference
+              model: us.anthropic.claude-sonnet-4-5-20251001-v1:0
+              # fallback_model: us.anthropic.claude-haiku-4-5-20251001-v1:0
+              prompt: |
+                Review the changes in this pull request.
+                Focus on correctness, security, and adherence to project conventions.
+                Report any issues found.
+              post_pr_comments: true
+              timeout_minutes: "15"
