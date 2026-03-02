@@ -24,6 +24,16 @@ This extension integrates Anthropic's Claude Code directly into your Azure DevOp
 - **MCP Integration**: Support for Model Context Protocol servers
 - **Fallback Models**: Automatic fallback when primary models are unavailable
 
+## Built-in Reviewers
+
+Enable one or more reviewers per pipeline to get structured, standards-based PR feedback. Each reviewer injects a domain-specific system prompt covering security, patterns, and best practices.
+
+**Infrastructure**: Terraform, YAML/Kubernetes, Helm, Cilium Network Policy, Dockerfile
+
+**Languages**: .NET Core (C#), Go, Java, JavaScript, Next.js, PHP, PowerShell, Python, Rust, SQL, TypeScript
+
+Multiple reviewers can be enabled simultaneously. Reviewers that share file extensions (e.g. Next.js + TypeScript both target `.ts`/`.tsx`) are complementary — each scopes its review to avoid duplicate findings.
+
 ## Use Cases
 
 - **Pull Request Reviews**: Automatically review code changes for quality, bugs, and best practices
