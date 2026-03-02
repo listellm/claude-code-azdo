@@ -23,6 +23,7 @@ export interface PrState {
   prId: string;
   org: string;
   project: string;
+  repoName: string;
   lastRunAt: string;
   modelId: string;
   promptHash: string;
@@ -50,9 +51,10 @@ function stateKey(
   prefix: string,
   org: string,
   project: string,
+  repoName: string,
   prId: string,
 ): string {
-  return `${prefix}/${org}/${project}/${prId}/state.json`;
+  return `${prefix}/${org}/${project}/${repoName}/${prId}/state.json`;
 }
 
 /**
@@ -63,10 +65,11 @@ export async function readPrState(
   config: S3Config,
   org: string,
   project: string,
+  repoName: string,
   prId: string,
 ): Promise<PrState | null> {
   const client = new S3Client({ region: config.region });
-  const key = stateKey(config.prefix, org, project, prId);
+  const key = stateKey(config.prefix, org, project, repoName, prId);
 
   try {
     const response = await client.send(
@@ -100,7 +103,13 @@ export async function writePrState(
   state: PrState,
 ): Promise<void> {
   const client = new S3Client({ region: config.region });
-  const key = stateKey(config.prefix, state.org, state.project, state.prId);
+  const key = stateKey(
+    config.prefix,
+    state.org,
+    state.project,
+    state.repoName,
+    state.prId,
+  );
 
   try {
     await client.send(
@@ -267,6 +276,7 @@ export function buildUpdatedState(
   prId: string,
   org: string,
   project: string,
+  repoName: string,
   modelId: string,
   promptHash: string,
   fileHashes: Record<string, string>,
@@ -309,6 +319,7 @@ export function buildUpdatedState(
     prId,
     org,
     project,
+    repoName,
     lastRunAt: new Date().toISOString(),
     modelId,
     promptHash,
