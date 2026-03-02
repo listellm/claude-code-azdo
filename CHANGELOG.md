@@ -1,3 +1,9 @@
+## [3.0.1](https://github.com/listellm/claude-code-azdo/compare/v3.0.0...v3.0.1) (2026-03-02)
+
+### Bug Fixes
+
+- use org/project in S3 key, update branding ([#21](https://github.com/listellm/claude-code-azdo/issues/21)) ([a2c1414](https://github.com/listellm/claude-code-azdo/commit/a2c1414271df9ca86d015a865b4e6b510dd7b88a))
+
 ## [3.0.0](https://github.com/listellm/claude-code-azdo/compare/v2.1.1...v3.0.0) (2026-03-02)
 
 ### ⚠ BREAKING CHANGES
