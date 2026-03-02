@@ -103,6 +103,24 @@ async function run(): Promise<void> {
       enabledReviewers.push("cilium");
     if (tl.getBoolInput("reviewer_dockerfile", false))
       enabledReviewers.push("dockerfile");
+    if (tl.getBoolInput("reviewer_dotnet_core", false))
+      enabledReviewers.push("dotnet_core");
+    if (tl.getBoolInput("reviewer_golang", false))
+      enabledReviewers.push("golang");
+    if (tl.getBoolInput("reviewer_java", false)) enabledReviewers.push("java");
+    if (tl.getBoolInput("reviewer_javascript", false))
+      enabledReviewers.push("javascript");
+    if (tl.getBoolInput("reviewer_nextjs", false))
+      enabledReviewers.push("nextjs");
+    if (tl.getBoolInput("reviewer_php", false)) enabledReviewers.push("php");
+    if (tl.getBoolInput("reviewer_powershell_core", false))
+      enabledReviewers.push("powershell_core");
+    if (tl.getBoolInput("reviewer_python", false))
+      enabledReviewers.push("python");
+    if (tl.getBoolInput("reviewer_rust", false)) enabledReviewers.push("rust");
+    if (tl.getBoolInput("reviewer_sql", false)) enabledReviewers.push("sql");
+    if (tl.getBoolInput("reviewer_typescript", false))
+      enabledReviewers.push("typescript");
     const reviewerSystemPrompt = buildReviewerSystemPrompt(enabledReviewers);
 
     if (enabledReviewers.length > 0 && rawPrompt === "" && promptFile === "") {
