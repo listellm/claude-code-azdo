@@ -6,7 +6,12 @@ import { runClaudeAzure } from "./azure-run-claude";
 import { setupAzureEnvironment } from "./azure-setup";
 import { setupClaudeCodeSettings } from "./setup-claude-code-settings";
 import { validateEnvironmentVariablesAzure } from "./azure-validate-env";
-import { postPrReviewComments, verifyFixedIssues } from "./azure-pr-comment";
+import {
+  postPrReviewComments,
+  REVIEWER_VOTE,
+  verifyFixedIssues,
+  votePr,
+} from "./azure-pr-comment";
 import {
   extractIssues,
   fetchThreads,
@@ -128,6 +133,10 @@ async function run(): Promise<void> {
     }
 
     const postPrComments = tl.getBoolInput("post_pr_comments", false);
+    const approvePrOnNoIssues = tl.getBoolInput(
+      "approve_pr_on_no_issues",
+      false,
+    );
     const minimumSeverity = (
       tl.getInput("minimum_severity", false) ?? "WARNING"
     ).toUpperCase();
@@ -325,6 +334,14 @@ async function run(): Promise<void> {
       );
       postedIssues = postResult.posted;
       newThreadMap = postResult.threadMap;
+
+      if (approvePrOnNoIssues && prId) {
+        if (postedIssues.length === 0) {
+          await votePr(prCommentToken, REVIEWER_VOTE.APPROVED);
+        } else {
+          await votePr(prCommentToken, REVIEWER_VOTE.WAITING_FOR_AUTHOR);
+        }
+      }
     }
 
     // Merge thread maps (existing + newly posted)

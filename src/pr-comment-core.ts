@@ -10,6 +10,12 @@ export const THREAD_STATUS = {
   CLOSED: 4,
 } as const;
 
+export const REVIEWER_VOTE = {
+  APPROVED: 10,
+  WAITING_FOR_AUTHOR: -5,
+  NO_VOTE: 0,
+} as const;
+
 export interface PrConfig {
   collectionUri: string;
   project: string;
@@ -411,6 +417,119 @@ export function replyToThread(
         hostname: parsedUrl.hostname,
         path: parsedUrl.pathname + parsedUrl.search,
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+          Authorization: `Basic ${token}`,
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on("end", () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve();
+          } else {
+            reject(
+              new Error(
+                `ADO API returned ${res.statusCode}: ${data.slice(0, 200)}`,
+              ),
+            );
+          }
+        });
+      },
+    );
+
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
+ * Fetches the authenticated user's identity GUID from ADO connection data.
+ * Required to submit a reviewer vote for the current token identity.
+ */
+export function getCurrentUserId(
+  config: PrConfig,
+  requestFn: RequestFn = https.request,
+): Promise<string> {
+  const org = config.collectionUri.replace(/\/$/, "");
+  const url = `${org}/_apis/connectionData`;
+  const token = Buffer.from(`:${config.accessToken}`).toString("base64");
+  const parsedUrl = new URL(url);
+
+  return new Promise<string>((resolve, reject) => {
+    const req = requestFn(
+      {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${token}`,
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(data) as {
+              authenticatedUser?: { id?: string };
+            };
+            const userId = parsed.authenticatedUser?.id;
+            if (!userId) {
+              reject(
+                new Error(
+                  "connectionData response missing authenticatedUser.id",
+                ),
+              );
+            } else {
+              resolve(userId);
+            }
+          } catch {
+            reject(
+              new Error(
+                `Failed to parse connectionData response: ${data.slice(0, 200)}`,
+              ),
+            );
+          }
+        });
+      },
+    );
+
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+/**
+ * Submits a reviewer vote on the pull request.
+ * vote=10 → Approved, vote=-5 → Waiting for author
+ * Requires "Code (Read & Write)" PAT scope.
+ */
+export async function approvePullRequest(
+  config: PrConfig,
+  vote: 10 | -5,
+  requestFn: RequestFn = https.request,
+): Promise<void> {
+  const userId = await getCurrentUserId(config, requestFn);
+  const org = config.collectionUri.replace(/\/$/, "");
+  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${encodeURIComponent(config.prId)}/reviewers/${encodeURIComponent(userId)}?api-version=7.1`;
+  const body = JSON.stringify({ vote });
+  const token = Buffer.from(`:${config.accessToken}`).toString("base64");
+  const parsedUrl = new URL(url);
+
+  return new Promise<void>((resolve, reject) => {
+    const req = requestFn(
+      {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(body),

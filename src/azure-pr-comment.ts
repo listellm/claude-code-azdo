@@ -1,16 +1,20 @@
 import * as tl from "azure-pipelines-task-lib/task";
 import {
+  approvePullRequest,
   extractIssues,
   filterAcceptedIssues,
   issueFingerprint,
   postIssueThread,
   REVIEW_ATTRIBUTION,
+  REVIEWER_VOTE,
   replyToThread,
   THREAD_STATUS,
   updateThreadStatus,
   type PrConfig,
   type ReviewIssue,
 } from "./pr-comment-core";
+
+export { REVIEWER_VOTE } from "./pr-comment-core";
 
 export interface PostResult {
   posted: ReviewIssue[];
@@ -190,4 +194,53 @@ export async function verifyFixedIssues(
   }
 
   return { verified, stillPresent };
+}
+
+/**
+ * Submits a reviewer vote on the current PR.
+ * Non-throwing — logs a warning on failure.
+ *
+ * @param accessToken - PAT or System.AccessToken; must have Code (Read & Write) scope for votes.
+ * @param vote - REVIEWER_VOTE.APPROVED (10) or REVIEWER_VOTE.WAITING_FOR_AUTHOR (-5).
+ */
+export async function votePr(
+  accessToken: string,
+  vote: 10 | -5,
+): Promise<void> {
+  const prId = tl.getVariable("System.PullRequest.PullRequestId");
+  if (!prId) {
+    console.log("Not a PR run — skipping reviewer vote");
+    return;
+  }
+
+  const collectionUri = tl.getVariable("System.CollectionUri");
+  const project = tl.getVariable("System.TeamProject");
+  const repoId = tl.getVariable("Build.Repository.ID");
+
+  if (!collectionUri || !project || !repoId || !accessToken) {
+    console.warn(
+      "Missing required pipeline variables for reviewer vote — skipping",
+    );
+    return;
+  }
+
+  const config: PrConfig = {
+    collectionUri,
+    project,
+    repoId,
+    prId,
+    accessToken,
+  };
+
+  try {
+    await approvePullRequest(config, vote);
+    if (vote === REVIEWER_VOTE.APPROVED) {
+      console.log(`Approved PR #${prId}`);
+    } else {
+      console.log(`Set PR #${prId} to waiting for author`);
+    }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Failed to submit reviewer vote for PR #${prId}: ${message}`);
+  }
 }
