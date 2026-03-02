@@ -108,7 +108,8 @@ describe("computeDirtyFiles", () => {
   const baseState: PrState = {
     schemaVersion: 1,
     prId: "42",
-    repoId: "repo-abc",
+    org: "my-org",
+    project: "my-project",
     lastRunAt: "2026-03-01T10:00:00Z",
     modelId: "claude-sonnet-4-6",
     promptHash: hashContent("my-prompt"),
@@ -226,7 +227,8 @@ describe("buildCachePreamble", () => {
   const state: PrState = {
     schemaVersion: 1,
     prId: "1",
-    repoId: "r",
+    org: "my-org",
+    project: "my-project",
     lastRunAt: "",
     modelId: "m",
     promptHash: "p",
@@ -285,7 +287,8 @@ describe("mergeIssues", () => {
   const state: PrState = {
     schemaVersion: 1,
     prId: "1",
-    repoId: "r",
+    org: "my-org",
+    project: "my-project",
     lastRunAt: "",
     modelId: "m",
     promptHash: "p",
@@ -368,7 +371,8 @@ describe("buildUpdatedState", () => {
   const existingState: PrState = {
     schemaVersion: 1,
     prId: "10",
-    repoId: "repo-xyz",
+    org: "my-org",
+    project: "my-project",
     lastRunAt: "2026-03-01T10:00:00Z",
     modelId: "claude-sonnet-4-6",
     promptHash: hashContent("old-prompt"),
@@ -400,7 +404,8 @@ describe("buildUpdatedState", () => {
     const updated = buildUpdatedState(
       existingState,
       "10",
-      "repo-xyz",
+      "my-org",
+      "my-project",
       "claude-sonnet-4-6",
       hashContent("new-prompt"),
       { "changed.tf": hashContent("new content") },
@@ -418,7 +423,8 @@ describe("buildUpdatedState", () => {
     const updated = buildUpdatedState(
       existingState,
       "10",
-      "repo-xyz",
+      "my-org",
+      "my-project",
       "claude-sonnet-4-6",
       hashContent("new-prompt"),
       { "changed.tf": newHash },
@@ -436,7 +442,8 @@ describe("buildUpdatedState", () => {
     const updated = buildUpdatedState(
       existingState,
       "10",
-      "repo-xyz",
+      "my-org",
+      "my-project",
       "claude-sonnet-4-6",
       hashContent("new-prompt"),
       { "changed.tf": hashContent("new content") },
@@ -452,7 +459,8 @@ describe("buildUpdatedState", () => {
     const updated = buildUpdatedState(
       null,
       "5",
-      "repo-new",
+      "my-org",
+      "my-project",
       "claude-sonnet-4-6",
       hashContent("prompt"),
       { "a.tf": hashContent("content") },
@@ -461,7 +469,8 @@ describe("buildUpdatedState", () => {
       [],
     );
     expect(updated.prId).toBe("5");
-    expect(updated.repoId).toBe("repo-new");
+    expect(updated.org).toBe("my-org");
+    expect(updated.project).toBe("my-project");
     expect(updated.postedFingerprints).toHaveLength(0);
     expect(Object.keys(updated.files)).toEqual(["a.tf"]);
   });
@@ -474,7 +483,8 @@ describe("buildUpdatedState", () => {
     const updated = buildUpdatedState(
       existingWith500,
       "10",
-      "repo-xyz",
+      "my-org",
+      "my-project",
       "claude-sonnet-4-6",
       hashContent("prompt"),
       {},
@@ -490,7 +500,18 @@ describe("buildUpdatedState", () => {
 
   test("sets schemaVersion to 1 and updates lastRunAt", () => {
     const before = Date.now();
-    const updated = buildUpdatedState(null, "1", "r", "m", "p", {}, [], [], []);
+    const updated = buildUpdatedState(
+      null,
+      "1",
+      "my-org",
+      "my-project",
+      "m",
+      "p",
+      {},
+      [],
+      [],
+      [],
+    );
     const after = Date.now();
     expect(updated.schemaVersion).toBe(1);
     const runAt = new Date(updated.lastRunAt).getTime();

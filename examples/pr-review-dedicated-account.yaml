@@ -1,0 +1,70 @@
+# Example: Claude Code PR review using a dedicated ADO service account.
+#
+# By default the task posts PR comments as the pipeline's built-in build
+# service identity. Using a dedicated account gives clearer attribution in
+# the ADO UI (e.g. "zzSystem claude-code-azdo-service-account").
+#
+# ─── Entra ID setup ─────────────────────────────────────────────────────────
+# 1. Create an Entra ID user for the service account, e.g.:
+#      claude-code-azdo-service-account@your-tenant.com
+#
+# 2. Add the user to your ADO organisation and grant it Reader access on the
+#    projects where it will post review comments.
+#
+# ─── PAT ────────────────────────────────────────────────────────────────────
+# Sign in as the service account user and create a Personal Access Token with
+# the following scope only:
+#
+#   Pull Request Threads — Read & Write
+#
+# No other scope is needed. The task only reads existing threads (for noise
+# suppression) and creates new ones.
+#
+# ─── Variable group ─────────────────────────────────────────────────────────
+# Store the PAT as a secret variable in an ADO variable group, e.g.:
+#
+#   Group name : claude-code
+#   Variable   : CLAUDE_CODE_AZDO_TOKEN   (mark as secret)
+#
+# Grant the variable group access to the pipelines that use it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+trigger: none
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  name: your-agent-pool-name # replace with your agent pool
+
+variables:
+  - group: claude-code # contains CLAUDE_CODE_AZDO_TOKEN
+
+stages:
+  - stage: ClaudeCodeReview
+    displayName: "Claude Code PR Review (dedicated account)"
+    jobs:
+      - job: Review
+        displayName: "AI code review — attributed to service account"
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            displayName: "Checkout with full history"
+
+          - task: ClaudeCodeBaseTask@2
+            displayName: "Run Claude Code review"
+            inputs:
+              anthropic_api_key: $(ANTHROPIC_API_KEY)
+              prompt: |
+                Review the changes in this pull request.
+                Focus on correctness, security, and adherence to project conventions.
+                Report any issues found.
+              post_pr_comments: true
+              minimum_severity: WARNING
+              timeout_minutes: "15"
+            env:
+              # Pass the service account PAT so comments are attributed to the
+              # dedicated user rather than the pipeline build service identity.
+              SYSTEM_ACCESSTOKEN: $(CLAUDE_CODE_AZDO_TOKEN)
