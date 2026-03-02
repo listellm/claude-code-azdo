@@ -3,8 +3,10 @@ import {
   extractIssues,
   fetchAcceptedFiles,
   filterAcceptedIssues,
+  issueFingerprint,
   postIssueThread,
   type PrConfig,
+  type ReviewIssue,
 } from "./pr-comment-core";
 
 /**
@@ -12,15 +14,20 @@ import {
  * Reads AzDo pipeline variables, extracts issues from the execution file,
  * and posts one thread per issue. Non-throwing — a failed comment post does
  * not fail the pipeline task.
+ *
+ * @param postedFingerprints - Optional set of fingerprints already posted in
+ *   previous runs. Issues matching these fingerprints are skipped.
+ * @returns The issues that were actually posted in this call.
  */
 export async function postPrReviewComments(
   executionFile: string,
   minimumSeverity: string = "WARNING",
-): Promise<void> {
+  postedFingerprints?: Set<string>,
+): Promise<ReviewIssue[]> {
   const prId = tl.getVariable("System.PullRequest.PullRequestId");
   if (!prId) {
     console.log("Not a PR run — skipping comment post");
-    return;
+    return [];
   }
 
   const collectionUri = tl.getVariable("System.CollectionUri");
@@ -32,7 +39,7 @@ export async function postPrReviewComments(
     console.log(
       "Missing required pipeline variables for PR comment posting — skipping",
     );
-    return;
+    return [];
   }
 
   const config: PrConfig = {
@@ -46,31 +53,49 @@ export async function postPrReviewComments(
   const accepted = await fetchAcceptedFiles(config);
 
   const issues = await extractIssues(executionFile, minimumSeverity);
-  const filtered = filterAcceptedIssues(issues, accepted);
+  const acceptedFiltered = filterAcceptedIssues(issues, accepted);
 
-  if (filtered.length < issues.length) {
+  if (acceptedFiltered.length < issues.length) {
     console.log(
-      `Suppressed ${issues.length - filtered.length} issue(s) on accepted file(s)`,
+      `Suppressed ${issues.length - acceptedFiltered.length} issue(s) on accepted file(s)`,
     );
   }
 
-  if (filtered.length === 0) {
-    console.log("No issues to post — skipping comment post");
-    return;
+  const deduped =
+    postedFingerprints && postedFingerprints.size > 0
+      ? acceptedFiltered.filter(
+          (issue) => !postedFingerprints.has(issueFingerprint(issue)),
+        )
+      : acceptedFiltered;
+
+  if (deduped.length < acceptedFiltered.length) {
+    console.log(
+      `Suppressed ${acceptedFiltered.length - deduped.length} issue(s) already posted in a previous run`,
+    );
   }
 
-  console.log(`Posting ${filtered.length} review comment(s) to PR #${prId}`);
+  if (deduped.length === 0) {
+    console.log("No issues to post — skipping comment post");
+    return [];
+  }
 
-  for (const issue of filtered) {
+  console.log(`Posting ${deduped.length} review comment(s) to PR #${prId}`);
+
+  const posted: ReviewIssue[] = [];
+
+  for (const issue of deduped) {
     try {
       await postIssueThread(config, issue);
       const location = issue.file
         ? `${issue.file}${issue.line !== undefined ? `:${issue.line}` : ""}`
         : "general";
       console.log(`  Posted [${issue.severity}] thread at ${location}`);
+      posted.push(issue);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`  Failed to post [${issue.severity}] thread: ${message}`);
     }
   }
+
+  return posted;
 }

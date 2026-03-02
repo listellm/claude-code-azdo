@@ -41,33 +41,35 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 
 ## Task Inputs
 
-| Input                     | Type      | Default   | Description                                                             |
-| ------------------------- | --------- | --------- | ----------------------------------------------------------------------- |
-| `prompt`                  | multiLine |           | Inline prompt (mutually exclusive with `prompt_file`)                   |
-| `prompt_file`             | string    |           | Path to a prompt file (mutually exclusive with `prompt`)                |
-| `allowed_tools`           | string    | see below | Comma-separated list of tools Claude may use                            |
-| `disallowed_tools`        | string    |           | Comma-separated list of tools Claude may not use                        |
-| `max_turns`               | string    |           | Maximum conversation turns (default: no limit)                          |
-| `mcp_config`              | string    |           | Path to an MCP config JSON file                                         |
-| `system_prompt`           | multiLine |           | Override the system prompt                                              |
-| `append_system_prompt`    | multiLine |           | Append to the default system prompt                                     |
-| `reviewer_terraform`      | boolean   | `false`   | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files |
-| `reviewer_yaml`           | boolean   | `false`   | Inject YAML/Kubernetes review standards; reads modified `.yaml` files   |
-| `model`                   | string    | see below | Model identifier (provider-specific format)                             |
-| `fallback_model`          | string    |           | Fallback model when the primary is unavailable                          |
-| `claude_env`              | multiLine |           | Custom environment variables (`KEY: VALUE` per line)                    |
-| `timeout_minutes`         | string    | `10`      | Execution timeout in minutes                                            |
-| `install_claude_cli`      | boolean   | `true`    | Install Claude CLI if absent; set to `false` when pre-installed         |
-| `use_node_cache`          | boolean   | `false`   | Cache Node.js dependencies (only for Node.js projects with lock files)  |
-| `post_pr_comments`        | boolean   | `true`    | Post issues as inline PR threads; requires `System.AccessToken`         |
-| `minimum_severity`        | pickList  | `WARNING` | Minimum severity to post: `CRITICAL`, `WARNING`, or `SUGGESTION`        |
-| `anthropic_api_key`       | string    |           | Anthropic API key                                                       |
-| `claude_code_oauth_token` | string    |           | Claude Code OAuth token (alternative to API key)                        |
-| `use_bedrock`             | boolean   | `false`   | Route requests through AWS Bedrock                                      |
-| `use_vertex`              | boolean   | `false`   | Route requests through Google Vertex AI                                 |
-| `aws_region`              | string    |           | AWS region (required when `use_bedrock: true`)                          |
-| `gcp_project_id`          | string    |           | GCP project ID (required when `use_vertex: true`)                       |
-| `gcp_region`              | string    |           | GCP region (required when `use_vertex: true`)                           |
+| Input                     | Type      | Default           | Description                                                             |
+| ------------------------- | --------- | ----------------- | ----------------------------------------------------------------------- |
+| `prompt`                  | multiLine |                   | Inline prompt (mutually exclusive with `prompt_file`)                   |
+| `prompt_file`             | string    |                   | Path to a prompt file (mutually exclusive with `prompt`)                |
+| `allowed_tools`           | string    | see below         | Comma-separated list of tools Claude may use                            |
+| `disallowed_tools`        | string    |                   | Comma-separated list of tools Claude may not use                        |
+| `max_turns`               | string    |                   | Maximum conversation turns (default: no limit)                          |
+| `mcp_config`              | string    |                   | Path to an MCP config JSON file                                         |
+| `system_prompt`           | multiLine |                   | Override the system prompt                                              |
+| `append_system_prompt`    | multiLine |                   | Append to the default system prompt                                     |
+| `reviewer_terraform`      | boolean   | `false`           | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files |
+| `reviewer_yaml`           | boolean   | `false`           | Inject YAML/Kubernetes review standards; reads modified `.yaml` files   |
+| `model`                   | string    | see below         | Model identifier (provider-specific format)                             |
+| `fallback_model`          | string    |                   | Fallback model when the primary is unavailable                          |
+| `claude_env`              | multiLine |                   | Custom environment variables (`KEY: VALUE` per line)                    |
+| `timeout_minutes`         | string    | `10`              | Execution timeout in minutes                                            |
+| `install_claude_cli`      | boolean   | `true`            | Install Claude CLI if absent; set to `false` when pre-installed         |
+| `use_node_cache`          | boolean   | `false`           | Cache Node.js dependencies (only for Node.js projects with lock files)  |
+| `post_pr_comments`        | boolean   | `true`            | Post issues as inline PR threads; requires `System.AccessToken`         |
+| `minimum_severity`        | pickList  | `WARNING`         | Minimum severity to post: `CRITICAL`, `WARNING`, or `SUGGESTION`        |
+| `anthropic_api_key`       | string    |                   | Anthropic API key                                                       |
+| `claude_code_oauth_token` | string    |                   | Claude Code OAuth token (alternative to API key)                        |
+| `use_bedrock`             | boolean   | `false`           | Route requests through AWS Bedrock                                      |
+| `use_vertex`              | boolean   | `false`           | Route requests through Google Vertex AI                                 |
+| `aws_region`              | string    |                   | AWS region (required when `use_bedrock: true`)                          |
+| `gcp_project_id`          | string    |                   | GCP project ID (required when `use_vertex: true`)                       |
+| `gcp_region`              | string    |                   | GCP region (required when `use_vertex: true`)                           |
+| `s3_state_bucket`         | string    |                   | S3 bucket for PR review state caching (opt-in; leave empty to disable)  |
+| `s3_state_prefix`         | string    | `claude-pr-state` | S3 key prefix for state objects                                         |
 
 `use_bedrock` and `use_vertex` are mutually exclusive.
 
@@ -140,6 +142,61 @@ image: my-registry/app:latest # tag pinning handled by renovate
 
 This is version-controlled and permanent. Use it when you have consciously accepted a finding
 and want it suppressed for all future runs without relying on thread state.
+
+## S3 State Caching
+
+When `s3_state_bucket` is set, the task persists per-PR review state to S3 so that re-runs on subsequent commits can skip unchanged files and suppress already-posted issues.
+
+```yaml
+- task: ClaudeCodeBaseTask@2
+  inputs:
+    reviewer_terraform: true
+    use_bedrock: true
+    aws_region: "eu-central-1"
+    model: "eu.anthropic.claude-sonnet-4-6-20251001-v1:0"
+    post_pr_comments: true
+    s3_state_bucket: "my-claude-state-bucket"
+    # s3_state_prefix: "claude-pr-state"  # optional, this is the default
+```
+
+### How it works
+
+State is stored at `s3://{bucket}/{prefix}/{repoId}/{prId}/state.json` and includes:
+
+- **Content hashes** for each changed file — re-review only the files that actually changed
+- **Posted fingerprints** — deduplicate issues already raised in a previous run so the PR is not flooded with duplicate threads
+
+On each run the task:
+
+1. Reads state from S3
+2. Computes which files changed since the last run (by comparing content hashes)
+3. Injects a context preamble telling Claude to focus on the changed files
+4. After Claude finishes, writes updated state back to S3
+
+### Cache invalidation
+
+| Trigger                        | Effect                         |
+| ------------------------------ | ------------------------------ |
+| File content changes           | File is dirty; re-reviewed     |
+| Model ID changes               | Full cache bust                |
+| `append_system_prompt` changes | Full cache bust                |
+| New PR / different PR          | Different S3 key — fresh state |
+
+### AWS permissions
+
+The IAM role used by the pipeline needs `s3:GetObject` and `s3:PutObject` on the state bucket:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": ["s3:GetObject", "s3:PutObject"],
+  "Resource": "arn:aws:s3:::my-claude-state-bucket/claude-pr-state/*"
+}
+```
+
+When using Bedrock with IRSA, the same pod identity covers both Bedrock and S3 provided the role has the S3 actions above.
+
+S3 read/write failures are non-fatal — the task logs a warning and continues with all files treated as dirty.
 
 ## Task Outputs
 

@@ -206,6 +206,21 @@
         "SUGGESTION": "All (including suggestions)"
       },
       "helpMarkDown": "Only post PR comment threads for issues at or above this severity. CRITICAL > WARNING > SUGGESTION. Default: WARNING."
+    },
+    {
+      "name": "s3_state_bucket",
+      "type": "string",
+      "label": "S3 State Bucket",
+      "required": false,
+      "helpMarkDown": "S3 bucket name for PR review state caching. When set, re-runs skip unchanged files and suppress already-posted issues. Leave empty to disable (default)."
+    },
+    {
+      "name": "s3_state_prefix",
+      "type": "string",
+      "label": "S3 State Prefix",
+      "required": false,
+      "defaultValue": "claude-pr-state",
+      "helpMarkDown": "S3 key prefix for state objects. Defaults to 'claude-pr-state'. Only used when s3_state_bucket is set."
     }
   ],
   "outputVariables": [

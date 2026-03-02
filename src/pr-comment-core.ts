@@ -313,3 +313,11 @@ export function filterAcceptedIssues(
     (issue) => !acceptedFiles.has(normalizeFilePath(issue.file ?? "")),
   );
 }
+
+/**
+ * Returns a stable fingerprint string uniquely identifying an issue.
+ * Used for deduplication across PR review runs.
+ */
+export function issueFingerprint(issue: ReviewIssue): string {
+  return `${issue.severity}|${issue.file ?? ""}|${issue.line ?? ""}|${issue.description}`;
+}

@@ -31,6 +31,7 @@
     "release": "pnpm run version:bump && pnpm run build && pnpm run create:vsix && pnpm run publish:extension"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
     "azure-pipelines-task-lib": "^4.17.3"
   },
   "devDependencies": {
