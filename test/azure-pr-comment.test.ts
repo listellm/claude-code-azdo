@@ -11,6 +11,7 @@ vi.mock("azure-pipelines-task-lib/task", () => ({
   getInput: vi.fn(),
   setVariable: vi.fn(),
   setResult: vi.fn(),
+  warning: vi.fn(),
 }));
 
 vi.mock("../src/pr-comment-core", async (importOriginal) => {
@@ -68,13 +69,15 @@ describe("votePr", () => {
       if (name === "System.PullRequest.PullRequestId") return "42";
       return undefined;
     });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await votePr("token", REVIEWER_VOTE.APPROVED as 10);
 
     expect(mockedApprovePullRequest).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Missing required pipeline variables"),
+    expect(tl.warning).toHaveBeenCalledWith(
+      expect.stringContaining("Cannot submit reviewer vote for PR #42"),
+    );
+    expect(tl.warning).toHaveBeenCalledWith(
+      expect.stringContaining("System.CollectionUri"),
     );
   });
 
@@ -111,13 +114,12 @@ describe("votePr", () => {
     mockedApprovePullRequest.mockRejectedValue(
       new Error("ADO API returned 403"),
     );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await expect(
       votePr("token", REVIEWER_VOTE.APPROVED as 10),
     ).resolves.toBeUndefined();
 
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(tl.warning).toHaveBeenCalledWith(
       expect.stringContaining("Failed to submit reviewer vote"),
     );
   });

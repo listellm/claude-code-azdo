@@ -141,7 +141,7 @@ async function run(): Promise<void> {
       tl.getInput("minimum_severity", false) ?? "WARNING"
     ).toUpperCase();
     const prCommentToken =
-      tl.getInput("azdo_pat", false) ||
+      tl.getInput("pr_review_token", false) ||
       tl.getVariable("System.AccessToken") ||
       "";
     const userAppendSystemPrompt =

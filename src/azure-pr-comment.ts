@@ -218,8 +218,14 @@ export async function votePr(
   const repoId = tl.getVariable("Build.Repository.ID");
 
   if (!collectionUri || !project || !repoId || !accessToken) {
-    console.warn(
-      "Missing required pipeline variables for reviewer vote — skipping",
+    const missing = [
+      !collectionUri && "System.CollectionUri",
+      !project && "System.TeamProject",
+      !repoId && "Build.Repository.ID",
+      !accessToken && "accessToken (pr_review_token / System.AccessToken)",
+    ].filter(Boolean);
+    tl.warning(
+      `Cannot submit reviewer vote for PR #${prId}: missing ${missing.join(", ")}`,
     );
     return;
   }
@@ -241,6 +247,6 @@ export async function votePr(
     }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`Failed to submit reviewer vote for PR #${prId}: ${message}`);
+    tl.warning(`Failed to submit reviewer vote for PR #${prId}: ${message}`);
   }
 }
