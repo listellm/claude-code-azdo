@@ -17,6 +17,13 @@ vi.mock("@anthropic-ai/sdk", () => {
   return { default: MockAnthropic };
 });
 
+vi.mock("@anthropic-ai/bedrock-sdk", () => {
+  function MockAnthropicBedrock() {
+    return { messages: { create: mockCreate } };
+  }
+  return { AnthropicBedrock: MockAnthropicBedrock };
+});
+
 beforeEach(() => {
   mockCreate.mockReset();
 });
@@ -330,14 +337,14 @@ describe("createAnthropicClient", () => {
     expect(client.messages).toBeDefined();
   });
 
-  test("creates Bedrock client with region-based URL", () => {
+  test("creates Bedrock client via AnthropicBedrock SDK", () => {
     const client = createAnthropicClient({
-      apiKey: "bedrock-key", // pragma: allowlist secret
       useBedrock: true,
       awsRegion: "eu-west-1",
-      model: "anthropic.claude-haiku",
+      model: "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
     });
     expect(client).toBeDefined();
+    expect(client.messages).toBeDefined();
   });
 
   test("creates Vertex client with project/region URL", () => {
@@ -386,23 +393,14 @@ describe("classifyThreadReplies — file path handling", () => {
 // Bedrock/Vertex keyword-only mode (C1)
 // ---------------------------------------------------------------------------
 
-describe("classifyThreadReplies — Bedrock/Vertex keyword-only", () => {
+describe("classifyThreadReplies — Bedrock classification", () => {
   const bedrockConfig: ClassifierConfig = {
-    apiKey: "bedrock-key", // pragma: allowlist secret
     useBedrock: true,
     awsRegion: "eu-west-1",
-    model: "anthropic.claude-haiku",
+    model: "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
   };
 
-  const vertexConfig: ClassifierConfig = {
-    apiKey: "vertex-key", // pragma: allowlist secret
-    useVertex: true,
-    gcpProjectId: "my-project",
-    gcpRegion: "europe-west4",
-    model: "claude-haiku",
-  };
-
-  test("explicit #fixed works with Bedrock", async () => {
+  test("explicit #fixed works with Bedrock — no API call", async () => {
     const threads: PrThread[] = [
       buildThread(1, "/foo.tf", [
         { content: "Issue found", commentType: 1 },
@@ -416,7 +414,57 @@ describe("classifyThreadReplies — Bedrock/Vertex keyword-only", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  test("explicit #accept works with Vertex", async () => {
+  test("ambiguous replies call API and return classification", async () => {
+    mockCreate.mockResolvedValue({
+      content: [
+        {
+          type: "text",
+          text: '[{ "id": 10, "intent": "fixed" }]',
+        },
+      ],
+    });
+
+    const threads: PrThread[] = [
+      buildThread(10, "/foo.tf", [
+        { content: "Issue", commentType: 1 },
+        { content: "done, resolved in abc123" },
+      ]),
+    ];
+
+    const results = await classifyThreadReplies(threads, bedrockConfig);
+    expect(results).toHaveLength(1);
+    expect(results[0]!.intent).toBe("fixed");
+    expect(results[0]!.threadId).toBe(10);
+    expect(mockCreate).toHaveBeenCalledOnce();
+  });
+
+  test("ambiguous replies return none on API failure", async () => {
+    mockCreate.mockRejectedValue(new Error("Bedrock API error"));
+
+    const threads: PrThread[] = [
+      buildThread(10, "/foo.tf", [
+        { content: "Issue", commentType: 1 },
+        { content: "I fixed this already" },
+      ]),
+    ];
+
+    const results = await classifyThreadReplies(threads, bedrockConfig);
+    expect(results).toHaveLength(1);
+    expect(results[0]!.intent).toBe("none");
+    expect(mockCreate).toHaveBeenCalledOnce();
+  });
+});
+
+describe("classifyThreadReplies — Vertex keyword-only", () => {
+  const vertexConfig: ClassifierConfig = {
+    apiKey: "vertex-key", // pragma: allowlist secret
+    useVertex: true,
+    gcpProjectId: "my-project",
+    gcpRegion: "europe-west4",
+    model: "claude-haiku",
+  };
+
+  test("explicit #accept works with Vertex — no API call", async () => {
     const threads: PrThread[] = [
       buildThread(1, "/foo.tf", [
         { content: "Issue found", commentType: 1 },
@@ -427,19 +475,6 @@ describe("classifyThreadReplies — Bedrock/Vertex keyword-only", () => {
     const results = await classifyThreadReplies(threads, vertexConfig);
     expect(results).toHaveLength(1);
     expect(results[0]!.intent).toBe("accept");
-    expect(mockCreate).not.toHaveBeenCalled();
-  });
-
-  test("ambiguous replies return empty with Bedrock — no API call", async () => {
-    const threads: PrThread[] = [
-      buildThread(10, "/foo.tf", [
-        { content: "Issue", commentType: 1 },
-        { content: "done, resolved in abc123" },
-      ]),
-    ];
-
-    const results = await classifyThreadReplies(threads, bedrockConfig);
-    expect(results).toHaveLength(0);
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
