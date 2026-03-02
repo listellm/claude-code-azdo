@@ -1,3 +1,9 @@
+## [3.2.0](https://github.com/listellm/claude-code-azdo/compare/v3.1.0...v3.2.0) (2026-03-02)
+
+### Features
+
+- add thread reply lifecycle ([#accept](https://github.com/listellm/claude-code-azdo/issues/accept)/[#fixed](https://github.com/listellm/claude-code-azdo/issues/fixed)) ([#24](https://github.com/listellm/claude-code-azdo/issues/24)) ([bf3f59b](https://github.com/listellm/claude-code-azdo/commit/bf3f59bf76319e4173295df5691caedb5f84735d))
+
 ## [3.1.0](https://github.com/listellm/claude-code-azdo/compare/v3.0.2...v3.1.0) (2026-03-02)
 
 ### Features
