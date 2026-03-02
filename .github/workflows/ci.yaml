@@ -63,6 +63,25 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod
+
   release:
     name: Release
     needs: [prettier, typecheck, test]
