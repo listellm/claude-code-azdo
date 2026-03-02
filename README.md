@@ -2,6 +2,8 @@
 
 An Azure DevOps extension that runs [Claude Code](https://www.anthropic.com/claude-code) inside your pipelines for automated code analysis, review, triage, and development tasks.
 
+> **Fork notice**: This project is a fork of [wen-templari/claude-code-base-azure-pipeline-task](https://github.com/wen-templari/claude-code-base-azure-pipeline-task).
+
 ## Features
 
 - **Multi-provider**: Anthropic API, AWS Bedrock, Google Vertex AI
@@ -75,7 +77,7 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 
 ## PR Review Comments
 
-When `post_pr_comments: true` (the default), the task posts issues Claude finds as inline PR thread comments after execution. This requires `System.AccessToken` to be available in the pipeline.
+When `post_pr_comments: true` (the default), the task posts issues Claude finds as inline PR thread comments after execution. This requires an ADO token passed via the `SYSTEM_ACCESSTOKEN` environment variable.
 
 Severity filtering is controlled by `minimum_severity` (`CRITICAL > WARNING > SUGGESTION`). The default `WARNING` suppresses suggestions, which tend to be noisy on busy repos. Set to `SUGGESTION` to see everything, or `CRITICAL` to see blocking issues only.
 
@@ -88,6 +90,45 @@ Severity filtering is controlled by `minimum_severity` (`CRITICAL > WARNING > SU
     minimum_severity: "WARNING" # default — omit to use the same value
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+```
+
+### Using a dedicated service account
+
+By default `$(System.AccessToken)` is used, which attributes comments to the pipeline's built-in build service identity. For clearer attribution in the ADO UI, use a dedicated Entra ID user with a PAT instead. See [`examples/pr-review-dedicated-account.yaml`](./examples/pr-review-dedicated-account.yaml) for a complete pipeline example.
+
+**1. Create a dedicated Entra ID user** (e.g. `claude-code-azdo-service-account@your-tenant.com`) and add it to your ADO project with at minimum the **Reader** role so it can access pull requests.
+
+**2. Sign in as that user and generate a PAT** with the following scope only:
+
+| Scope                | Permission   |
+| -------------------- | ------------ |
+| Pull Request Threads | Read & Write |
+
+**3. Store the PAT** as a secret variable (e.g. `CLAUDE_CODE_AZDO_TOKEN`) in an ADO variable group or as a pipeline secret.
+
+**4. Pass it to the task** via `SYSTEM_ACCESSTOKEN`:
+
+```yaml
+- task: ClaudeCodeBaseTask@2
+  inputs:
+    post_pr_comments: true
+  env:
+    SYSTEM_ACCESSTOKEN: $(CLAUDE_CODE_AZDO_TOKEN)
+```
+
+If using a shared job template, reference the variable group there so all pipelines pick it up automatically:
+
+```yaml
+jobs:
+  - job: claude_code_review
+    variables:
+      - group: claude-code # contains CLAUDE_CODE_AZDO_TOKEN
+    steps:
+      - task: ClaudeCodeBaseTask@2
+        inputs:
+          post_pr_comments: true
+        env:
+          SYSTEM_ACCESSTOKEN: $(CLAUDE_CODE_AZDO_TOKEN)
 ```
 
 ### Comment format
@@ -161,7 +202,7 @@ When `s3_state_bucket` is set, the task persists per-PR review state to S3 so th
 
 ### How it works
 
-State is stored at `s3://{bucket}/{prefix}/{repoId}/{prId}/state.json` and includes:
+State is stored at `s3://{bucket}/{prefix}/{org}/{project}/{prId}/state.json` (e.g. `s3://my-bucket/claude-pr-state/my-org/MyProject/24963/state.json`) and includes:
 
 - **Content hashes** for each changed file — re-review only the files that actually changed
 - **Posted fingerprints** — deduplicate issues already raised in a previous run so the PR is not flooded with duplicate threads
@@ -184,13 +225,18 @@ On each run the task:
 
 ### AWS permissions
 
-The IAM role used by the pipeline needs `s3:GetObject` and `s3:PutObject` on the state bucket:
+The IAM role used by the pipeline needs two statements — object-level actions on the prefix, and `s3:ListBucket` on the bucket itself (required for the SDK to return 404 instead of 403 on a missing state file):
 
 ```json
 {
   "Effect": "Allow",
   "Action": ["s3:GetObject", "s3:PutObject"],
   "Resource": "arn:aws:s3:::my-claude-state-bucket/claude-pr-state/*"
+},
+{
+  "Effect": "Allow",
+  "Action": "s3:ListBucket",
+  "Resource": "arn:aws:s3:::my-claude-state-bucket"
 }
 ```
 

@@ -21,7 +21,8 @@ export interface PrStateFile {
 export interface PrState {
   schemaVersion: number;
   prId: string;
-  repoId: string;
+  org: string;
+  project: string;
   lastRunAt: string;
   modelId: string;
   promptHash: string;
@@ -45,8 +46,13 @@ export function hashPrompt(prompt: string): string {
   return hashContent(prompt);
 }
 
-function stateKey(prefix: string, repoId: string, prId: string): string {
-  return `${prefix}/${repoId}/${prId}/state.json`;
+function stateKey(
+  prefix: string,
+  org: string,
+  project: string,
+  prId: string,
+): string {
+  return `${prefix}/${org}/${project}/${prId}/state.json`;
 }
 
 /**
@@ -55,11 +61,12 @@ function stateKey(prefix: string, repoId: string, prId: string): string {
  */
 export async function readPrState(
   config: S3Config,
-  repoId: string,
+  org: string,
+  project: string,
   prId: string,
 ): Promise<PrState | null> {
   const client = new S3Client({ region: config.region });
-  const key = stateKey(config.prefix, repoId, prId);
+  const key = stateKey(config.prefix, org, project, prId);
 
   try {
     const response = await client.send(
@@ -93,7 +100,7 @@ export async function writePrState(
   state: PrState,
 ): Promise<void> {
   const client = new S3Client({ region: config.region });
-  const key = stateKey(config.prefix, state.repoId, state.prId);
+  const key = stateKey(config.prefix, state.org, state.project, state.prId);
 
   try {
     await client.send(
@@ -258,7 +265,8 @@ export function deduplicateByFingerprints(
 export function buildUpdatedState(
   existing: PrState | null,
   prId: string,
-  repoId: string,
+  org: string,
+  project: string,
   modelId: string,
   promptHash: string,
   fileHashes: Record<string, string>,
@@ -299,7 +307,8 @@ export function buildUpdatedState(
   return {
     schemaVersion: SCHEMA_VERSION,
     prId,
-    repoId,
+    org,
+    project,
     lastRunAt: new Date().toISOString(),
     modelId,
     promptHash,

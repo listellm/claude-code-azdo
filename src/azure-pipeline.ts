@@ -101,7 +101,9 @@ async function run(): Promise<void> {
     const s3StatePrefix =
       tl.getInput("s3_state_prefix", false) || "claude-pr-state";
     const prId = tl.getVariable("System.PullRequest.PullRequestId") ?? "";
-    const repoId = tl.getVariable("Build.Repository.ID") ?? "";
+    const collectionUri = tl.getVariable("System.CollectionUri") ?? "";
+    const org = collectionUri.replace(/\/$/, "").split("/").pop() ?? "";
+    const project = tl.getVariable("System.TeamProject") ?? "";
     const targetBranch =
       tl.getVariable("System.PullRequest.TargetBranchName") ?? "";
     const modelId = tl.getInput("model", false) || "claude-sonnet-4-6";
@@ -113,7 +115,7 @@ async function run(): Promise<void> {
     let promptHashValue = "";
     let cachePreamble = "";
 
-    if (s3StateBucket && prId && repoId) {
+    if (s3StateBucket && prId && org && project) {
       const awsRegion =
         tl.getInput("aws_region", false) ??
         tl.getVariable("AWS_REGION") ??
@@ -125,7 +127,7 @@ async function run(): Promise<void> {
         region: awsRegion,
       };
 
-      state = await readPrState(s3Config, repoId, prId);
+      state = await readPrState(s3Config, org, project, prId);
       promptHashValue = hashPrompt(appendSystemPrompt ?? "");
 
       const dirtyResult = await computeDirtyFiles(
@@ -179,7 +181,7 @@ async function run(): Promise<void> {
     }
 
     // Write updated S3 state after run
-    if (s3Config && prId && repoId && result.executionFile) {
+    if (s3Config && prId && org && project && result.executionFile) {
       const allNewIssues = await extractIssues(
         result.executionFile,
         "SUGGESTION",
@@ -187,7 +189,8 @@ async function run(): Promise<void> {
       const updatedState = buildUpdatedState(
         state,
         prId,
-        repoId,
+        org,
+        project,
         modelId,
         promptHashValue,
         fileHashes,
