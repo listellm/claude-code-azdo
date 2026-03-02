@@ -76,6 +76,9 @@ async function run(): Promise<void> {
     });
 
     const postPrComments = tl.getBoolInput("post_pr_comments", false);
+    const minimumSeverity = (
+      tl.getInput("minimum_severity", false) ?? "WARNING"
+    ).toUpperCase();
     const userAppendSystemPrompt =
       tl.getInput("append_system_prompt", false) ?? undefined;
 
@@ -101,7 +104,7 @@ async function run(): Promise<void> {
     });
 
     if (postPrComments && result.executionFile) {
-      await postPrReviewComments(result.executionFile);
+      await postPrReviewComments(result.executionFile, minimumSeverity);
     }
 
     if (result.conclusion === "success") {

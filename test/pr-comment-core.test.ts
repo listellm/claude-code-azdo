@@ -2,14 +2,25 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { writeFile, unlink } from "fs/promises";
 import * as os from "os";
 import * as path from "path";
-import type * as https from "https";
 import { EventEmitter } from "events";
 import {
+  ACCEPT_KEYWORD,
   extractIssues,
+  fetchAcceptedFiles,
+  filterAcceptedIssues,
   postIssueThread,
   type PrConfig,
+  type RequestFn,
   type ReviewIssue,
 } from "../src/pr-comment-core";
+
+// ---------------------------------------------------------------------------
+// ACCEPT_KEYWORD
+// ---------------------------------------------------------------------------
+
+test("ACCEPT_KEYWORD is /accept", () => {
+  expect(ACCEPT_KEYWORD).toBe("/accept");
+});
 
 // ---------------------------------------------------------------------------
 // extractIssues
@@ -103,7 +114,7 @@ describe("extractIssues", () => {
 ]
 \`\`\``;
     await writeFile(tmpFile, buildExecutionJson(resultText));
-    const issues = await extractIssues(tmpFile);
+    const issues = await extractIssues(tmpFile, "SUGGESTION");
     expect(issues).toHaveLength(2);
     expect(issues[0]?.severity).toBe("WARNING");
     expect(issues[1]?.severity).toBe("SUGGESTION");
@@ -146,6 +157,50 @@ Final block:
     const issues = await extractIssues(tmpFile);
     expect(issues).toEqual([]);
   });
+
+  describe("severity filtering", () => {
+    const allThreeSeverities = `\`\`\`json
+[
+  { "severity": "CRITICAL", "description": "Critical issue" },
+  { "severity": "WARNING", "description": "Warning issue" },
+  { "severity": "SUGGESTION", "description": "Suggestion issue" }
+]
+\`\`\``;
+
+    test("SUGGESTION threshold — returns all three severities", async () => {
+      await writeFile(tmpFile, buildExecutionJson(allThreeSeverities));
+      const issues = await extractIssues(tmpFile, "SUGGESTION");
+      expect(issues).toHaveLength(3);
+    });
+
+    test("WARNING threshold (default) — returns CRITICAL and WARNING, drops SUGGESTION", async () => {
+      await writeFile(tmpFile, buildExecutionJson(allThreeSeverities));
+      const issues = await extractIssues(tmpFile, "WARNING");
+      expect(issues).toHaveLength(2);
+      expect(issues.map((i) => i.severity)).toEqual(["CRITICAL", "WARNING"]);
+    });
+
+    test("CRITICAL threshold — returns only CRITICAL", async () => {
+      await writeFile(tmpFile, buildExecutionJson(allThreeSeverities));
+      const issues = await extractIssues(tmpFile, "CRITICAL");
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.severity).toBe("CRITICAL");
+    });
+
+    test("unknown threshold — falls back to WARNING rank, keeps WARNING and CRITICAL", async () => {
+      await writeFile(tmpFile, buildExecutionJson(allThreeSeverities));
+      const issues = await extractIssues(tmpFile, "BOGUS");
+      expect(issues).toHaveLength(2);
+      expect(issues.map((i) => i.severity)).toEqual(["CRITICAL", "WARNING"]);
+    });
+
+    test("no-arg call uses WARNING default", async () => {
+      await writeFile(tmpFile, buildExecutionJson(allThreeSeverities));
+      const issues = await extractIssues(tmpFile);
+      expect(issues).toHaveLength(2);
+      expect(issues.map((i) => i.severity)).toEqual(["CRITICAL", "WARNING"]);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -173,7 +228,7 @@ describe("postIssueThread", () => {
   function buildMockRequest(
     statusCode: number,
     responseBody = "{}",
-  ): { requestFn: typeof https.request; requestMock: MockRequest } {
+  ): { requestFn: RequestFn; requestMock: MockRequest } {
     const responseMock = new EventEmitter() as EventEmitter & {
       statusCode: number;
     };
@@ -195,7 +250,7 @@ describe("postIssueThread", () => {
     ) => {
       if (callback) callback(responseMock);
       return requestMock;
-    }) as unknown as typeof https.request;
+    }) as unknown as RequestFn;
 
     return { requestFn, requestMock };
   }
@@ -221,6 +276,10 @@ describe("postIssueThread", () => {
     expect(body.comments[0]!.content).toContain(
       "Consider using a remote state backend",
     );
+    expect(body.comments[0]!.content).toContain("Claude Code CI Review");
+    // General thread (no file) → shows /accept help only, no claude-ignore
+    expect(body.comments[0]!.content).toContain("/accept");
+    expect(body.comments[0]!.content).not.toContain("claude-ignore");
     expect(body.threadContext).toBeUndefined();
   });
 
@@ -248,6 +307,14 @@ describe("postIssueThread", () => {
     expect(body.threadContext.filePath).toBe("/modules/rds/main.tf");
     expect(body.threadContext.rightFileStart.line).toBe(88);
     expect(body.threadContext.rightFileEnd.line).toBe(88);
+    // File thread → help text includes both /accept and claude-ignore
+    const content = (
+      JSON.parse(requestMock.write.mock.calls[0]![0] as string) as {
+        comments: Array<{ content: string }>;
+      }
+    ).comments[0]!.content;
+    expect(content).toContain("/accept");
+    expect(content).toContain("claude-ignore");
   });
 
   test("prefixes file path with / if not already present", async () => {
@@ -310,7 +377,7 @@ describe("postIssueThread", () => {
         options,
         callback,
       );
-    }) as unknown as typeof https.request;
+    }) as unknown as RequestFn;
 
     await postIssueThread(
       config,
@@ -324,5 +391,196 @@ describe("postIssueThread", () => {
     const expectedToken = Buffer.from(":secret-token").toString("base64");
     expect(callOptions.headers["Authorization"]).toBe(`Basic ${expectedToken}`);
     expect(requestMock.end).toHaveBeenCalledOnce();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fetchAcceptedFiles
+// ---------------------------------------------------------------------------
+
+function buildGetMock(
+  statusCode: number,
+  responseBody: string,
+): { requestFn: RequestFn } {
+  const responseMock = new EventEmitter() as EventEmitter & {
+    statusCode: number;
+  };
+  responseMock.statusCode = statusCode;
+
+  const requestMock = Object.assign(new EventEmitter(), {
+    end: vi.fn(() => {
+      setImmediate(() => {
+        responseMock.emit("data", Buffer.from(responseBody));
+        responseMock.emit("end");
+      });
+    }),
+  });
+
+  const requestFn = ((_options: unknown, callback?: (res: unknown) => void) => {
+    if (callback) callback(responseMock);
+    return requestMock;
+  }) as unknown as RequestFn;
+
+  return { requestFn };
+}
+
+function buildErrorMock(): { requestFn: RequestFn } {
+  const requestMock = Object.assign(new EventEmitter(), {
+    end: vi.fn(() => {
+      setImmediate(() => {
+        requestMock.emit("error", new Error("Network failure"));
+      });
+    }),
+  });
+
+  const requestFn = ((_options: unknown, _callback?: unknown) => {
+    return requestMock;
+  }) as unknown as RequestFn;
+
+  return { requestFn };
+}
+
+describe("fetchAcceptedFiles", () => {
+  const config: PrConfig = {
+    collectionUri: "https://dev.azure.com/myorg/",
+    project: "Platform",
+    repoId: "repo-abc",
+    prId: "42",
+    accessToken: "secret-token",
+  };
+
+  function threadList(
+    threads: Array<{
+      filePath?: string;
+      comments: string[];
+    }>,
+  ): string {
+    return JSON.stringify({
+      value: threads.map((t) => ({
+        ...(t.filePath ? { threadContext: { filePath: t.filePath } } : {}),
+        comments: t.comments.map((c) => ({ content: c })),
+      })),
+    });
+  }
+
+  test("returns empty Set when GET request fails with network error", async () => {
+    const { requestFn } = buildErrorMock();
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result.size).toBe(0);
+  });
+
+  test("returns empty Set when response is not valid JSON", async () => {
+    const { requestFn } = buildGetMock(200, "not json");
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result.size).toBe(0);
+  });
+
+  test("returns empty Set when no thread has /accept reply", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      threadList([
+        { filePath: "/modules/vpc/main.tf", comments: ["LGTM", "Nice work"] },
+      ]),
+    );
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result.size).toBe(0);
+  });
+
+  test("returns normalised file path when root comment contains /accept", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      threadList([{ filePath: "/modules/vpc/main.tf", comments: ["/accept"] }]),
+    );
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result).toContain("modules/vpc/main.tf");
+  });
+
+  test("returns file path when a reply comment (non-root) contains /accept", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      threadList([
+        {
+          filePath: "/modules/rds/main.tf",
+          comments: ["[WARNING] Plaintext password", "Agreed, /accept this"],
+        },
+      ]),
+    );
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result).toContain("modules/rds/main.tf");
+  });
+
+  test("/accept matching is case-insensitive", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      threadList([{ filePath: "/foo.tf", comments: ["/ACCEPT"] }]),
+    );
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result).toContain("foo.tf");
+  });
+
+  test("returns empty string for general thread (no threadContext) with /accept", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      threadList([{ comments: ["/accept — acknowledged"] }]),
+    );
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result).toContain("");
+  });
+
+  test("returns multiple accepted file paths", async () => {
+    const { requestFn } = buildGetMock(
+      200,
+      threadList([
+        { filePath: "/a.tf", comments: ["/accept"] },
+        { filePath: "/b.tf", comments: ["looks fine"] },
+        { filePath: "/c.tf", comments: ["/accept"] },
+      ]),
+    );
+    const result = await fetchAcceptedFiles(config, requestFn);
+    expect(result.size).toBe(2);
+    expect(result).toContain("a.tf");
+    expect(result).toContain("c.tf");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filterAcceptedIssues
+// ---------------------------------------------------------------------------
+
+describe("filterAcceptedIssues", () => {
+  const baseIssue = (file?: string): ReviewIssue => ({
+    severity: "WARNING",
+    description: "test issue",
+    ...(file !== undefined ? { file } : {}),
+  });
+
+  test("returns all issues when accepted set is empty", () => {
+    const issues = [baseIssue("foo.tf"), baseIssue("bar.tf")];
+    expect(filterAcceptedIssues(issues, new Set())).toHaveLength(2);
+  });
+
+  test("filters out issue whose file is in accepted set", () => {
+    const issues = [baseIssue("foo.tf"), baseIssue("bar.tf")];
+    const result = filterAcceptedIssues(issues, new Set(["foo.tf"]));
+    expect(result).toHaveLength(1);
+    expect(result[0]?.file).toBe("bar.tf");
+  });
+
+  test("filters issue with leading slash when normalised path is in set", () => {
+    const issues = [baseIssue("/foo.tf")];
+    const result = filterAcceptedIssues(issues, new Set(["foo.tf"]));
+    expect(result).toHaveLength(0);
+  });
+
+  test("filters no-file issue when empty string is in accepted set", () => {
+    const issues = [baseIssue()];
+    const result = filterAcceptedIssues(issues, new Set([""]));
+    expect(result).toHaveLength(0);
+  });
+
+  test("keeps no-file issue when empty string is not in accepted set", () => {
+    const issues = [baseIssue()];
+    const result = filterAcceptedIssues(issues, new Set(["foo.tf"]));
+    expect(result).toHaveLength(1);
   });
 });
