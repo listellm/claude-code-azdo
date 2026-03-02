@@ -1,6 +1,8 @@
 import * as https from "https";
 import { readFile } from "fs/promises";
 
+export const ACCEPT_KEYWORD = "/accept";
+
 export interface PrConfig {
   collectionUri: string;
   project: string;
@@ -40,15 +42,32 @@ Rules:
 - "file" and "line" are optional — only include when the issue maps to a specific location
 - If no issues are found, emit an empty array: []
 - Do not include any text after the closing \`\`\`
+- If a line contains a \`claude-ignore\` annotation in a code comment (any syntax: \`// claude-ignore\`, \`# claude-ignore\`, \`<!-- claude-ignore -->\`, \`-- claude-ignore\`, \`/* claude-ignore */\` etc.), do not include any issue for that line in the JSON output.
 `.trim();
+
+const REVIEW_ATTRIBUTION = "🤖 **Claude Code CI Review**";
+
+const REVIEW_HELP_FILE =
+  "---\n💡 Reply `/accept` to suppress all issues on this file in future runs · add `# claude-ignore` (or language equivalent) to the line to suppress permanently.";
+
+const REVIEW_HELP_GENERAL =
+  "---\n💡 Reply `/accept` to suppress this on future runs.";
+
+const SEVERITY_RANK: Record<string, number> = {
+  SUGGESTION: 1,
+  WARNING: 2,
+  CRITICAL: 3,
+};
 
 /**
  * Reads the execution JSON array, finds the result entry, and parses
  * the terminal JSON block from the result text.
  * Returns [] if not found, malformed, or empty.
+ * Only returns issues at or above minimumSeverity rank.
  */
 export async function extractIssues(
   executionFile: string,
+  minimumSeverity: string = "WARNING",
 ): Promise<ReviewIssue[]> {
   let raw: string;
   try {
@@ -107,7 +126,11 @@ export async function extractIssues(
     return [];
   }
 
-  return parsed.filter(isReviewIssue);
+  const minimumRank =
+    SEVERITY_RANK[minimumSeverity] ?? SEVERITY_RANK["WARNING"]!;
+  return parsed
+    .filter(isReviewIssue)
+    .filter((issue) => (SEVERITY_RANK[issue.severity] ?? 0) >= minimumRank);
 }
 
 function isReviewIssue(value: unknown): value is ReviewIssue {
@@ -127,7 +150,7 @@ function isReviewIssue(value: unknown): value is ReviewIssue {
   return true;
 }
 
-type RequestFn = typeof https.request;
+export type RequestFn = typeof https.request;
 
 /**
  * Posts a single review issue as an ADO PR thread.
@@ -148,7 +171,7 @@ export function postIssueThread(
     comments: [
       {
         parentCommentId: 0,
-        content: `${severityLabel} ${issue.description}`,
+        content: `${REVIEW_ATTRIBUTION} | ${severityLabel}\n\n${issue.description}\n\n${issue.file ? REVIEW_HELP_FILE : REVIEW_HELP_GENERAL}`,
         commentType: 1,
       },
     ],
@@ -202,4 +225,91 @@ export function postIssueThread(
     req.write(body);
     req.end();
   });
+}
+
+function normalizeFilePath(p: string): string {
+  return p.startsWith("/") ? p.slice(1) : p;
+}
+
+interface ThreadListResponse {
+  value: Array<{
+    threadContext?: { filePath?: string };
+    comments?: Array<{ content?: string }>;
+  }>;
+}
+
+/**
+ * GETs all threads on the PR and returns the set of file paths for which
+ * any thread comment contains the ACCEPT_KEYWORD (case-insensitive, trimmed).
+ * File paths are normalised (no leading slash).
+ * An empty string ("") represents general (no-file) threads.
+ * Non-throwing — returns empty Set on any error.
+ */
+export async function fetchAcceptedFiles(
+  config: PrConfig,
+  requestFn: RequestFn = https.request,
+): Promise<Set<string>> {
+  const org = config.collectionUri.replace(/\/$/, "");
+  const url = `${org}/${encodeURIComponent(config.project)}/_apis/git/repositories/${encodeURIComponent(config.repoId)}/pullRequests/${config.prId}/threads?api-version=7.1`;
+  const token = Buffer.from(`:${config.accessToken}`).toString("base64");
+  const parsedUrl = new URL(url);
+
+  return new Promise<Set<string>>((resolve) => {
+    const req = requestFn(
+      {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${token}`,
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(data) as ThreadListResponse;
+            const accepted = new Set<string>();
+            for (const thread of parsed.value) {
+              const hasAccept = thread.comments?.some((c) =>
+                c.content
+                  ?.trim()
+                  .toLowerCase()
+                  .includes(ACCEPT_KEYWORD.toLowerCase()),
+              );
+              if (hasAccept) {
+                accepted.add(
+                  normalizeFilePath(thread.threadContext?.filePath ?? ""),
+                );
+              }
+            }
+            resolve(accepted);
+          } catch {
+            console.warn(
+              "fetchAcceptedFiles: failed to parse thread list response",
+            );
+            resolve(new Set());
+          }
+        });
+      },
+    );
+
+    req.on("error", (err: Error) => {
+      console.warn(`fetchAcceptedFiles: request failed — ${err.message}`);
+      resolve(new Set());
+    });
+    req.end();
+  });
+}
+
+export function filterAcceptedIssues(
+  issues: ReviewIssue[],
+  acceptedFiles: Set<string>,
+): ReviewIssue[] {
+  return issues.filter(
+    (issue) => !acceptedFiles.has(normalizeFilePath(issue.file ?? "")),
+  );
 }

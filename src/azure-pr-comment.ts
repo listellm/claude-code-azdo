@@ -1,6 +1,8 @@
 import * as tl from "azure-pipelines-task-lib/task";
 import {
   extractIssues,
+  fetchAcceptedFiles,
+  filterAcceptedIssues,
   postIssueThread,
   type PrConfig,
 } from "./pr-comment-core";
@@ -13,6 +15,7 @@ import {
  */
 export async function postPrReviewComments(
   executionFile: string,
+  minimumSeverity: string = "WARNING",
 ): Promise<void> {
   const prId = tl.getVariable("System.PullRequest.PullRequestId");
   if (!prId) {
@@ -40,16 +43,25 @@ export async function postPrReviewComments(
     accessToken,
   };
 
-  const issues = await extractIssues(executionFile);
+  const accepted = await fetchAcceptedFiles(config);
 
-  if (issues.length === 0) {
-    console.log("No issues found — skipping comment post");
+  const issues = await extractIssues(executionFile, minimumSeverity);
+  const filtered = filterAcceptedIssues(issues, accepted);
+
+  if (filtered.length < issues.length) {
+    console.log(
+      `Suppressed ${issues.length - filtered.length} issue(s) on accepted file(s)`,
+    );
+  }
+
+  if (filtered.length === 0) {
+    console.log("No issues to post — skipping comment post");
     return;
   }
 
-  console.log(`Posting ${issues.length} review comment(s) to PR #${prId}`);
+  console.log(`Posting ${filtered.length} review comment(s) to PR #${prId}`);
 
-  for (const issue of issues) {
+  for (const issue of filtered) {
     try {
       await postIssueThread(config, issue);
       const location = issue.file

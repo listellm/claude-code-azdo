@@ -10,6 +10,8 @@ An Azure DevOps extension that runs [Claude Code](https://www.anthropic.com/clau
 - **MCP support**: Pass an MCP config file for external integrations
 - **Custom environment**: Inject environment variables into Claude's execution
 - **Output variables**: `conclusion` and `execution_file` for downstream steps
+- **PR review comments**: Posts issues as inline PR threads with severity filtering
+- **Noise suppression**: Accept issues per-file via `/accept` reply, or permanently via `claude-ignore` inline markers
 
 ## Installation
 
@@ -39,29 +41,105 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 
 ## Task Inputs
 
-| Input                     | Type      | Description                                              |
-| ------------------------- | --------- | -------------------------------------------------------- |
-| `prompt`                  | multiLine | Inline prompt (mutually exclusive with `prompt_file`)    |
-| `prompt_file`             | string    | Path to a prompt file (mutually exclusive with `prompt`) |
-| `allowed_tools`           | string    | Comma-separated list of tools Claude may use             |
-| `disallowed_tools`        | string    | Comma-separated list of tools Claude may not use         |
-| `max_turns`               | string    | Maximum conversation turns (default: no limit)           |
-| `mcp_config`              | string    | Path to an MCP config JSON file                          |
-| `system_prompt`           | multiLine | Override the system prompt                               |
-| `append_system_prompt`    | multiLine | Append to the default system prompt                      |
-| `model`                   | string    | Model identifier (provider-specific format)              |
-| `fallback_model`          | string    | Fallback model when the primary is unavailable           |
-| `claude_env`              | multiLine | Custom environment variables (`KEY: VALUE` per line)     |
-| `timeout_minutes`         | string    | Execution timeout in minutes (default: `10`)             |
-| `anthropic_api_key`       | string    | Anthropic API key                                        |
-| `claude_code_oauth_token` | string    | Claude Code OAuth token (alternative to API key)         |
-| `use_bedrock`             | boolean   | Route requests through AWS Bedrock                       |
-| `use_vertex`              | boolean   | Route requests through Google Vertex AI                  |
-| `aws_region`              | string    | AWS region (required when `use_bedrock: true`)           |
-| `gcp_project_id`          | string    | GCP project ID (required when `use_vertex: true`)        |
-| `gcp_region`              | string    | GCP region (required when `use_vertex: true`)            |
+| Input                     | Type      | Default   | Description                                                             |
+| ------------------------- | --------- | --------- | ----------------------------------------------------------------------- |
+| `prompt`                  | multiLine |           | Inline prompt (mutually exclusive with `prompt_file`)                   |
+| `prompt_file`             | string    |           | Path to a prompt file (mutually exclusive with `prompt`)                |
+| `allowed_tools`           | string    | see below | Comma-separated list of tools Claude may use                            |
+| `disallowed_tools`        | string    |           | Comma-separated list of tools Claude may not use                        |
+| `max_turns`               | string    |           | Maximum conversation turns (default: no limit)                          |
+| `mcp_config`              | string    |           | Path to an MCP config JSON file                                         |
+| `system_prompt`           | multiLine |           | Override the system prompt                                              |
+| `append_system_prompt`    | multiLine |           | Append to the default system prompt                                     |
+| `reviewer_terraform`      | boolean   | `false`   | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files |
+| `reviewer_yaml`           | boolean   | `false`   | Inject YAML/Kubernetes review standards; reads modified `.yaml` files   |
+| `model`                   | string    | see below | Model identifier (provider-specific format)                             |
+| `fallback_model`          | string    |           | Fallback model when the primary is unavailable                          |
+| `claude_env`              | multiLine |           | Custom environment variables (`KEY: VALUE` per line)                    |
+| `timeout_minutes`         | string    | `10`      | Execution timeout in minutes                                            |
+| `install_claude_cli`      | boolean   | `true`    | Install Claude CLI if absent; set to `false` when pre-installed         |
+| `use_node_cache`          | boolean   | `false`   | Cache Node.js dependencies (only for Node.js projects with lock files)  |
+| `post_pr_comments`        | boolean   | `true`    | Post issues as inline PR threads; requires `System.AccessToken`         |
+| `minimum_severity`        | pickList  | `WARNING` | Minimum severity to post: `CRITICAL`, `WARNING`, or `SUGGESTION`        |
+| `anthropic_api_key`       | string    |           | Anthropic API key                                                       |
+| `claude_code_oauth_token` | string    |           | Claude Code OAuth token (alternative to API key)                        |
+| `use_bedrock`             | boolean   | `false`   | Route requests through AWS Bedrock                                      |
+| `use_vertex`              | boolean   | `false`   | Route requests through Google Vertex AI                                 |
+| `aws_region`              | string    |           | AWS region (required when `use_bedrock: true`)                          |
+| `gcp_project_id`          | string    |           | GCP project ID (required when `use_vertex: true`)                       |
+| `gcp_region`              | string    |           | GCP region (required when `use_vertex: true`)                           |
 
 `use_bedrock` and `use_vertex` are mutually exclusive.
+
+## PR Review Comments
+
+When `post_pr_comments: true` (the default), the task posts issues Claude finds as inline PR thread comments after execution. This requires `System.AccessToken` to be available in the pipeline.
+
+Severity filtering is controlled by `minimum_severity` (`CRITICAL > WARNING > SUGGESTION`). The default `WARNING` suppresses suggestions, which tend to be noisy on busy repos. Set to `SUGGESTION` to see everything, or `CRITICAL` to see blocking issues only.
+
+```yaml
+- task: ClaudeCodeBaseTask@2
+  inputs:
+    reviewer_terraform: true
+    anthropic_api_key: "$(ANTHROPIC_API_KEY)"
+    post_pr_comments: true
+    minimum_severity: "WARNING" # default — omit to use the same value
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+```
+
+### Comment format
+
+Each thread Claude posts is clearly attributed and includes inline suppression instructions:
+
+```
+🤖 **Claude Code CI Review** | [WARNING]
+
+Password stored in plaintext — use a secrets manager or environment variable.
+
+---
+💡 Reply `/accept` to suppress all issues on this file in future runs · add `# claude-ignore`
+   (or language equivalent) to the line to suppress permanently.
+```
+
+General threads (not tied to a specific file) show only the `/accept` option.
+
+### Accepting issues via `/accept`
+
+Reply `/accept` to any thread Claude has posted. On the next pipeline run, all new issues
+on that file will be skipped.
+
+> **Matching is file-path based.** One `/accept` reply on any thread for `modules/vpc/main.tf`
+> suppresses _all_ new issues on that file in future runs. The reply can be on any comment in
+> the thread — root or reply — and is matched case-insensitively.
+
+### Suppressing issues permanently with `claude-ignore`
+
+Add a `claude-ignore` annotation in a code comment on the offending line. Claude will not
+emit an issue for any line carrying this marker regardless of run.
+
+```hcl
+# claude-ignore
+password = var.db_password  # accepted — rotated via Vault
+```
+
+```python
+# claude-ignore
+secret = os.getenv("MY_SECRET")  # not a secret — public config value
+```
+
+```typescript
+// claude-ignore
+const endpoint = "http://internal-service"; // internal only, not public
+```
+
+```yaml
+# claude-ignore
+image: my-registry/app:latest # tag pinning handled by renovate
+```
+
+This is version-controlled and permanent. Use it when you have consciously accepted a finding
+and want it suppressed for all future runs without relying on thread state.
 
 ## Task Outputs
 
