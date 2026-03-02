@@ -1,3 +1,16 @@
+## [3.0.0](https://github.com/listellm/claude-code-azdo/compare/v2.1.1...v3.0.0) (2026-03-02)
+
+### ⚠ BREAKING CHANGES
+
+- `postPrReviewComments` return type changed from `Promise<void>` to `Promise<ReviewIssue[]>`
+
+Co-authored-by: Listell McLean <listell.mclean@e-star.com>
+Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+### Breaking Changes
+
+- S3 state caching for PR review runs ([#20](https://github.com/listellm/claude-code-azdo/issues/20)) ([84f682c](https://github.com/listellm/claude-code-azdo/commit/84f682c29a9c5503b85d13b817b61b3dd1d2cbdc))
+
 ## [2.1.1](https://github.com/listellm/claude-code-azdo/compare/v2.1.0...v2.1.1) (2026-03-02)
 
 ### Bug Fixes
