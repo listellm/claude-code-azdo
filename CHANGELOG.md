@@ -1,3 +1,9 @@
+## [2.1.0](https://github.com/listellm/claude-code-azdo/compare/v2.0.0...v2.1.0) (2026-03-02)
+
+### Features
+
+- PR review noise suppression + attribution ([#18](https://github.com/listellm/claude-code-azdo/issues/18)) ([19f4a20](https://github.com/listellm/claude-code-azdo/commit/19f4a20e3072cd442f777061f79993bb87de1e5d))
+
 ## [2.0.0](https://github.com/listellm/claude-code-azdo/compare/v1.2.1...v2.0.0) (2026-03-02)
 
 ### Breaking Changes
