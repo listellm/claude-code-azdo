@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BedrockInvokeAnthropicModels",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",
+        "arn:aws:bedrock:*::inference-profile/us.anthropic.claude-*",
+        "arn:aws:bedrock:*::inference-profile/eu.anthropic.claude-*",
+        "arn:aws:bedrock:*::inference-profile/ap.anthropic.claude-*"
+      ]
+    }
+  ]
+}

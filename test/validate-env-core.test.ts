@@ -52,36 +52,36 @@ describe("validateConfig", () => {
       );
     });
 
-    test("fails when awsAccessKeyId is missing", () => {
+    test("passes with awsRegion only (IRSA / credential chain)", () => {
       const errors = validateConfig({
-        ...validBedrock,
-        awsAccessKeyId: undefined,
+        useBedrock: true,
+        useVertex: false,
+        awsRegion: "eu-west-1",
+      });
+      expect(errors).toHaveLength(0);
+    });
+
+    test("fails when only awsAccessKeyId is provided (partial pair)", () => {
+      const errors = validateConfig({
+        useBedrock: true,
+        useVertex: false,
+        awsRegion: "eu-west-1",
+        awsAccessKeyId: "AKIAIOSFODNN7EXAMPLE",
       });
       expect(errors).toContain(
-        "AWS_ACCESS_KEY_ID is required when using AWS Bedrock.",
+        "AWS_SECRET_ACCESS_KEY is required when AWS_ACCESS_KEY_ID is set.",
       );
     });
 
-    test("fails when awsSecretAccessKey is missing", () => {
+    test("fails when only awsSecretAccessKey is provided (partial pair)", () => {
       const errors = validateConfig({
-        ...validBedrock,
-        awsSecretAccessKey: undefined,
+        useBedrock: true,
+        useVertex: false,
+        awsRegion: "eu-west-1",
+        awsSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
       });
       expect(errors).toContain(
-        "AWS_SECRET_ACCESS_KEY is required when using AWS Bedrock.",
-      );
-    });
-
-    test("reports all missing Bedrock fields at once", () => {
-      const errors = validateConfig({ useBedrock: true, useVertex: false });
-      expect(errors).toContain(
-        "AWS_REGION is required when using AWS Bedrock.",
-      );
-      expect(errors).toContain(
-        "AWS_ACCESS_KEY_ID is required when using AWS Bedrock.",
-      );
-      expect(errors).toContain(
-        "AWS_SECRET_ACCESS_KEY is required when using AWS Bedrock.",
+        "AWS_ACCESS_KEY_ID is required when AWS_SECRET_ACCESS_KEY is set.",
       );
     });
   });

@@ -45,11 +45,19 @@ export function validateConfig(config: ValidationConfig): string[] {
     if (!config.awsRegion) {
       errors.push("AWS_REGION is required when using AWS Bedrock.");
     }
-    if (!config.awsAccessKeyId) {
-      errors.push("AWS_ACCESS_KEY_ID is required when using AWS Bedrock.");
+    // Static keys are optional — IRSA, Pod Identity, and the AWS SDK credential
+    // chain are used when they are absent. If one key is provided, both are required.
+    const hasKeyId = !!config.awsAccessKeyId;
+    const hasSecret = !!config.awsSecretAccessKey;
+    if (hasKeyId && !hasSecret) {
+      errors.push(
+        "AWS_SECRET_ACCESS_KEY is required when AWS_ACCESS_KEY_ID is set.",
+      );
     }
-    if (!config.awsSecretAccessKey) {
-      errors.push("AWS_SECRET_ACCESS_KEY is required when using AWS Bedrock.");
+    if (hasSecret && !hasKeyId) {
+      errors.push(
+        "AWS_ACCESS_KEY_ID is required when AWS_SECRET_ACCESS_KEY is set.",
+      );
     }
   } else if (config.useVertex) {
     if (!config.vertexProjectId) {

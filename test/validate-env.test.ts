@@ -90,31 +90,30 @@ describe("validateEnvironmentVariables", () => {
       );
     });
 
-    test("should fail when AWS_ACCESS_KEY_ID is missing", () => {
+    test("should pass with only AWS_REGION set (IRSA / credential chain)", () => {
       process.env.CLAUDE_CODE_USE_BEDROCK = "1";
       process.env.AWS_REGION = "us-east-1";
-      process.env.AWS_SECRET_ACCESS_KEY = "test-secret-key";
 
-      expect(() => validateEnvironmentVariables()).toThrow(
-        "AWS_ACCESS_KEY_ID is required when using AWS Bedrock.",
-      );
+      expect(() => validateEnvironmentVariables()).not.toThrow();
     });
 
-    test("should fail when AWS_SECRET_ACCESS_KEY is missing", () => {
+    test("should fail when only AWS_ACCESS_KEY_ID is set (partial pair)", () => {
       process.env.CLAUDE_CODE_USE_BEDROCK = "1";
       process.env.AWS_REGION = "us-east-1";
       process.env.AWS_ACCESS_KEY_ID = "test-access-key";
 
       expect(() => validateEnvironmentVariables()).toThrow(
-        "AWS_SECRET_ACCESS_KEY is required when using AWS Bedrock.",
+        "AWS_SECRET_ACCESS_KEY is required when AWS_ACCESS_KEY_ID is set.",
       );
     });
 
-    test("should report all missing Bedrock variables", () => {
+    test("should fail when only AWS_SECRET_ACCESS_KEY is set (partial pair)", () => {
       process.env.CLAUDE_CODE_USE_BEDROCK = "1";
+      process.env.AWS_REGION = "us-east-1";
+      process.env.AWS_SECRET_ACCESS_KEY = "test-secret-key";
 
       expect(() => validateEnvironmentVariables()).toThrow(
-        /AWS_REGION is required when using AWS Bedrock.*AWS_ACCESS_KEY_ID is required when using AWS Bedrock.*AWS_SECRET_ACCESS_KEY is required when using AWS Bedrock/s,
+        "AWS_ACCESS_KEY_ID is required when AWS_SECRET_ACCESS_KEY is set.",
       );
     });
   });
@@ -183,9 +182,9 @@ describe("validateEnvironmentVariables", () => {
   });
 
   describe("Error message formatting", () => {
-    test("should format error message properly with multiple errors", () => {
+    test("should format error message properly with single error", () => {
       process.env.CLAUDE_CODE_USE_BEDROCK = "1";
-      // Missing all required Bedrock vars
+      // Missing AWS_REGION
 
       let error: Error | undefined;
       try {
@@ -200,12 +199,6 @@ describe("validateEnvironmentVariables", () => {
       );
       expect(error!.message).toContain(
         "  - AWS_REGION is required when using AWS Bedrock.",
-      );
-      expect(error!.message).toContain(
-        "  - AWS_ACCESS_KEY_ID is required when using AWS Bedrock.",
-      );
-      expect(error!.message).toContain(
-        "  - AWS_SECRET_ACCESS_KEY is required when using AWS Bedrock.",
       );
     });
   });
