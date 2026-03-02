@@ -1,3 +1,9 @@
+## [2.0.0](https://github.com/listellm/claude-code-azdo/compare/v1.2.1...v2.0.0) (2026-03-02)
+
+### Breaking Changes
+
+- v2 — relax Bedrock credential validation for IRSA ([#17](https://github.com/listellm/claude-code-azdo/issues/17)) ([6a87f48](https://github.com/listellm/claude-code-azdo/commit/6a87f489920607f744fd5c9aea96e4b51ee3756a))
+
 ## [1.2.1](https://github.com/listellm/claude-code-azdo/compare/v1.2.0...v1.2.1) (2026-02-27)
 
 ### Bug Fixes
