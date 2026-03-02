@@ -90,6 +90,30 @@
       "helpMarkDown": "Inject YAML/Kubernetes review standards (structure, secrets hygiene, resource limits). User prompt takes priority over these defaults."
     },
     {
+      "name": "reviewer_helm",
+      "type": "boolean",
+      "label": "Helm Chart Review (.yaml, .yml, .tpl)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Helm chart review standards (chart structure, template correctness, values hygiene, security). Reads modified chart files."
+    },
+    {
+      "name": "reviewer_cilium",
+      "type": "boolean",
+      "label": "Cilium Network Policy Review (.yaml, .yml)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Cilium network policy review standards (selector correctness, egress/ingress rules, default-deny posture, DNS policy). Reads modified CNP files."
+    },
+    {
+      "name": "reviewer_dockerfile",
+      "type": "boolean",
+      "label": "Dockerfile Review (Dockerfile)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Dockerfile review standards (base image hygiene, layer ordering, security, multi-stage builds). Reads modified Dockerfiles."
+    },
+    {
       "name": "model",
       "type": "string",
       "label": "Model",

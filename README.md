@@ -31,7 +31,7 @@ pnpm run create:vsix
 ## Quick Start
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   displayName: "Run Claude Code"
   inputs:
     prompt: "Review this codebase and suggest improvements."
@@ -55,6 +55,9 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 | `append_system_prompt`    | multiLine |                   | Append to the default system prompt                                     |
 | `reviewer_terraform`      | boolean   | `false`           | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files |
 | `reviewer_yaml`           | boolean   | `false`           | Inject YAML/Kubernetes review standards; reads modified `.yaml` files   |
+| `reviewer_helm`           | boolean   | `false`           | Inject Helm chart review standards; reads modified chart files          |
+| `reviewer_cilium`         | boolean   | `false`           | Inject Cilium network policy review standards; reads modified CNP files |
+| `reviewer_dockerfile`     | boolean   | `false`           | Inject Dockerfile review standards; reads modified Dockerfiles          |
 | `model`                   | string    | see below         | Model identifier (provider-specific format)                             |
 | `fallback_model`          | string    |                   | Fallback model when the primary is unavailable                          |
 | `claude_env`              | multiLine |                   | Custom environment variables (`KEY: VALUE` per line)                    |
@@ -82,7 +85,7 @@ When `post_pr_comments: true` (the default), the task posts issues Claude finds 
 Severity filtering is controlled by `minimum_severity` (`CRITICAL > WARNING > SUGGESTION`). The default `WARNING` suppresses suggestions, which tend to be noisy on busy repos. Set to `SUGGESTION` to see everything, or `CRITICAL` to see blocking issues only.
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   inputs:
     reviewer_terraform: true
     anthropic_api_key: "$(ANTHROPIC_API_KEY)"
@@ -109,7 +112,7 @@ By default `$(System.AccessToken)` is used, which attributes comments to the pip
 **4. Pass it to the task** via `SYSTEM_ACCESSTOKEN`:
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   inputs:
     post_pr_comments: true
   env:
@@ -124,7 +127,7 @@ jobs:
     variables:
       - group: claude-code # contains CLAUDE_CODE_AZDO_TOKEN
     steps:
-      - task: ClaudeCodeBaseTask@2
+      - task: ClaudeCodeBaseTask@3
         inputs:
           post_pr_comments: true
         env:
@@ -189,7 +192,7 @@ and want it suppressed for all future runs without relying on thread state.
 When `s3_state_bucket` is set, the task persists per-PR review state to S3 so that re-runs on subsequent commits can skip unchanged files and suppress already-posted issues.
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   inputs:
     reviewer_terraform: true
     use_bedrock: true
@@ -256,7 +259,7 @@ S3 read/write failures are non-fatal — the task logs a warning and continues w
 ### Anthropic API (default)
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   inputs:
     prompt: "..."
     anthropic_api_key: "$(ANTHROPIC_API_KEY)"
@@ -267,7 +270,7 @@ Store the key as a secret pipeline variable or in Azure Key Vault.
 ### OAuth token
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   inputs:
     prompt: "..."
     claude_code_oauth_token: "$(CLAUDE_CODE_OAUTH_TOKEN)"
@@ -280,7 +283,7 @@ the AWS SDK credential chain resolves credentials automatically. No static keys 
 
 ```yaml
 steps:
-  - task: ClaudeCodeBaseTask@2
+  - task: ClaudeCodeBaseTask@3
     inputs:
       prompt: "..."
       use_bedrock: true
@@ -301,7 +304,7 @@ variables:
   AWS_SECRET_ACCESS_KEY: $(aws-secret-access-key)
 
 steps:
-  - task: ClaudeCodeBaseTask@2
+  - task: ClaudeCodeBaseTask@3
     inputs:
       prompt: "..."
       use_bedrock: true
@@ -319,7 +322,7 @@ variables:
   GOOGLE_APPLICATION_CREDENTIALS: $(google-application-credentials)
 
 steps:
-  - task: ClaudeCodeBaseTask@2
+  - task: ClaudeCodeBaseTask@3
     inputs:
       prompt: "..."
       use_vertex: true
@@ -334,7 +337,7 @@ Pass extra environment variables to Claude's execution context using `KEY: VALUE
 (one per line, colon-separated — not `KEY=VALUE`):
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   inputs:
     prompt: "..."
     anthropic_api_key: "$(ANTHROPIC_API_KEY)"
@@ -347,7 +350,7 @@ Pass extra environment variables to Claude's execution context using `KEY: VALUE
 ## Using Output Variables
 
 ```yaml
-- task: ClaudeCodeBaseTask@2
+- task: ClaudeCodeBaseTask@3
   name: claudeTask
   inputs:
     prompt: "..."

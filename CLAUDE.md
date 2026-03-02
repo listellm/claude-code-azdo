@@ -115,3 +115,63 @@ Custom environment variables are passed as `KEY: VALUE` per line (colon-separate
 `tsconfig.json` — type-checking only (`noEmit: true`), Bun bundler mode, used by `pnpm run typecheck` and editors.
 
 `tsconfig.build.json` — emits CommonJS to `dist/`, used by the build pipeline.
+
+### Reviewer system
+
+`src/reviewer-types.ts` defines the pluggable reviewer framework.
+
+- `ReviewerConfig` interface — `label`, `fileExtensions`, `systemPrompt`
+- `REVIEWER_CONFIGS` — keyed map of 5 reviewers: `terraform`, `yaml`, `helm`, `cilium`, `dockerfile`
+- `ReviewerTypeKey` — `keyof typeof REVIEWER_CONFIGS`
+- `buildReviewerSystemPrompt(enabledTypes)` — concatenates `systemPrompt` strings for all enabled types, separated by `\n\n`; returns `""` when empty
+
+Wiring in `azure-pipeline.ts`:
+
+1. Each `reviewer_*` boolean input is read via `tl.getBoolInput()` → pushes the key into `enabledReviewers[]`
+2. `buildReviewerSystemPrompt(enabledReviewers)` returns the combined prompt
+3. The result is prepended to `appendSystemPrompt` (ahead of `PR_ISSUES_INSTRUCTION`)
+4. When reviewers are enabled but no user prompt or prompt file is provided, `rawPrompt` defaults to `"Perform the review."`
+
+### PR review comments
+
+Two modules handle posting inline PR threads to Azure DevOps.
+
+**`src/pr-comment-core.ts`** — shared, provider-agnostic logic:
+
+- `ReviewIssue` interface — `severity` (`CRITICAL | WARNING | SUGGESTION`), optional `file`/`line`, `description`
+- `PR_ISSUES_INSTRUCTION` — appended to `appendSystemPrompt` when `post_pr_comments` is enabled; instructs Claude to emit a terminal ` ```json ` block of `ReviewIssue[]`
+- `extractIssues(executionFile, minimumSeverity)` — reads the NDJSON execution JSON array, finds the `type: "result"` entry, regex-extracts the last ` ```json ` block, parses it, and filters by severity rank
+- `fetchAcceptedFiles(config)` — GETs all PR threads, returns the set of file paths where any comment contains `/accept` (case-insensitive). Used for file-level suppression
+- `filterAcceptedIssues(issues, acceptedFiles)` — drops issues on accepted file paths
+- `issueFingerprint(issue)` — `severity|file|line|description` string for deduplication across runs
+- `postIssueThread(config, issue)` — POSTs a single ADO PR thread with inline `threadContext` when file+line are present
+
+**`src/azure-pr-comment.ts`** — thin AzDo adapter:
+
+- `postPrReviewComments(executionFile, minimumSeverity, postedFingerprints?)` — orchestrates: read AzDo pipeline vars → `fetchAcceptedFiles()` → `extractIssues()` → `filterAcceptedIssues()` → deduplicate via `postedFingerprints` → post each surviving issue as a thread. Returns the list of actually-posted issues. Non-throwing.
+
+Suppression mechanisms:
+
+- `/accept` — reply to any Claude thread on a file; all future issues on that file path are skipped
+- `claude-ignore` — inline code comment annotation; Claude is instructed not to emit issues for annotated lines
+
+### S3 state caching
+
+`src/pr-state.ts` persists per-PR review state to S3 so re-runs skip unchanged files and suppress duplicate issues.
+
+**Types:**
+
+- `PrState` — top-level state object: `schemaVersion`, PR identity fields, `modelId`, `promptHash`, `postedFingerprints[]`, `files` map
+- `PrStateFile` — per-file: `contentHash`, `issues[]`
+- `S3Config` — `bucket`, `prefix`, `region`
+
+**Key structure:** `{prefix}/{org}/{project}/{repoName}/{prId}/state.json`
+
+**Core functions:**
+
+- `readPrState()` / `writePrState()` — non-fatal S3 operations; return `null` / log warning on failure
+- `computeDirtyFiles(targetBranch, state, modelId, promptHash)` — runs `git diff --name-only origin/{target}...HEAD`, hashes each file's content at HEAD, compares against cached hashes. Full cache bust when `state` is null, model changes, or prompt hash changes
+- `buildCachePreamble(dirtyFiles, allChangedFiles, state)` — injects context telling Claude which files are unchanged and where to focus. Returns `""` when all files are dirty
+- `mergeIssues(state, dirtyFiles, newIssues)` — carries forward cached issues from unchanged files
+- `deduplicateByFingerprints(issues, postedFingerprints)` — filters issues already posted
+- `buildUpdatedState(...)` — carries forward unchanged files, updates dirty files with new hashes/issues, appends newly posted fingerprints capped at 500
