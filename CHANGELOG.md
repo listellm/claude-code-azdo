@@ -1,3 +1,9 @@
+## [3.6.0](https://github.com/listellm/claude-code-azdo/compare/v3.5.0...v3.6.0) (2026-03-02)
+
+### Features
+
+- add pnpm audit job to CI pipeline ([#28](https://github.com/listellm/claude-code-azdo/issues/28)) ([20c4998](https://github.com/listellm/claude-code-azdo/commit/20c4998dd92ae49b9af140d797b8076547806099))
+
 ## [3.5.0](https://github.com/listellm/claude-code-azdo/compare/v3.4.0...v3.5.0) (2026-03-02)
 
 ### Features
