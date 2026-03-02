@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import {
   normalizeFilePath,
   REVIEW_ATTRIBUTION,
@@ -31,14 +32,9 @@ export interface ClassifierConfig {
  */
 export function createAnthropicClient(config: ClassifierConfig): Anthropic {
   if (config.useBedrock) {
-    // Bedrock uses AWS env vars (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
-    // The main SDK's Anthropic class supports Bedrock via environment-based config
-    // but the canonical approach is @anthropic-ai/bedrock-sdk.
-    // For simplicity we use the base SDK with the Bedrock base URL pattern.
-    return new Anthropic({
-      apiKey: config.apiKey ?? "",
-      baseURL: `https://bedrock-runtime.${config.awsRegion ?? "us-east-1"}.amazonaws.com`,
-    });
+    return new AnthropicBedrock({
+      awsRegion: config.awsRegion ?? "us-east-1",
+    }) as unknown as Anthropic;
   }
 
   if (config.useVertex) {
@@ -125,11 +121,11 @@ export async function classifyThreadReplies(
     }
   }
 
-  // Classify ambiguous replies via Claude API (Anthropic direct only)
+  // Classify ambiguous replies via Claude API
   if (ambiguous.length > 0) {
-    if (config.useBedrock || config.useVertex) {
+    if (config.useVertex) {
       console.log(
-        `Skipping API classification for ${ambiguous.length} ambiguous thread(s) — Bedrock/Vertex not supported for classification. Only explicit #accept/#fixed keywords are processed.`,
+        `Skipping API classification for ${ambiguous.length} ambiguous thread(s) — Vertex not supported for classification. Only explicit #accept/#fixed keywords are processed.`,
       );
     } else {
       const classified = await classifyViaApi(ambiguous, config);

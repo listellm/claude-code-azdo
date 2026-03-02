@@ -181,9 +181,9 @@ log_step "Installing production dependencies in dist..."
 cd dist
 echo '{}' > package.json
 if [ "$VERBOSE" = true ]; then
-    npm install azure-pipelines-task-lib @aws-sdk/client-s3 @anthropic-ai/sdk --omit=dev --no-package-lock
+    npm install azure-pipelines-task-lib @aws-sdk/client-s3 @anthropic-ai/sdk @anthropic-ai/bedrock-sdk --omit=dev --no-package-lock
 else
-    npm install azure-pipelines-task-lib @aws-sdk/client-s3 @anthropic-ai/sdk --omit=dev --no-package-lock --silent
+    npm install azure-pipelines-task-lib @aws-sdk/client-s3 @anthropic-ai/sdk @anthropic-ai/bedrock-sdk --omit=dev --no-package-lock --silent
 fi
 rm package.json
 cd ..
