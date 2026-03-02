@@ -43,38 +43,49 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 
 ## Task Inputs
 
-| Input                     | Type      | Default           | Description                                                             |
-| ------------------------- | --------- | ----------------- | ----------------------------------------------------------------------- |
-| `prompt`                  | multiLine |                   | Inline prompt (mutually exclusive with `prompt_file`)                   |
-| `prompt_file`             | string    |                   | Path to a prompt file (mutually exclusive with `prompt`)                |
-| `allowed_tools`           | string    | see below         | Comma-separated list of tools Claude may use                            |
-| `disallowed_tools`        | string    |                   | Comma-separated list of tools Claude may not use                        |
-| `max_turns`               | string    |                   | Maximum conversation turns (default: no limit)                          |
-| `mcp_config`              | string    |                   | Path to an MCP config JSON file                                         |
-| `system_prompt`           | multiLine |                   | Override the system prompt                                              |
-| `append_system_prompt`    | multiLine |                   | Append to the default system prompt                                     |
-| `reviewer_terraform`      | boolean   | `false`           | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files |
-| `reviewer_yaml`           | boolean   | `false`           | Inject YAML/Kubernetes review standards; reads modified `.yaml` files   |
-| `reviewer_helm`           | boolean   | `false`           | Inject Helm chart review standards; reads modified chart files          |
-| `reviewer_cilium`         | boolean   | `false`           | Inject Cilium network policy review standards; reads modified CNP files |
-| `reviewer_dockerfile`     | boolean   | `false`           | Inject Dockerfile review standards; reads modified Dockerfiles          |
-| `model`                   | string    | see below         | Model identifier (provider-specific format)                             |
-| `fallback_model`          | string    |                   | Fallback model when the primary is unavailable                          |
-| `claude_env`              | multiLine |                   | Custom environment variables (`KEY: VALUE` per line)                    |
-| `timeout_minutes`         | string    | `10`              | Execution timeout in minutes                                            |
-| `install_claude_cli`      | boolean   | `true`            | Install Claude CLI if absent; set to `false` when pre-installed         |
-| `use_node_cache`          | boolean   | `false`           | Cache Node.js dependencies (only for Node.js projects with lock files)  |
-| `post_pr_comments`        | boolean   | `true`            | Post issues as inline PR threads; requires `System.AccessToken`         |
-| `minimum_severity`        | pickList  | `WARNING`         | Minimum severity to post: `CRITICAL`, `WARNING`, or `SUGGESTION`        |
-| `anthropic_api_key`       | string    |                   | Anthropic API key                                                       |
-| `claude_code_oauth_token` | string    |                   | Claude Code OAuth token (alternative to API key)                        |
-| `use_bedrock`             | boolean   | `false`           | Route requests through AWS Bedrock                                      |
-| `use_vertex`              | boolean   | `false`           | Route requests through Google Vertex AI                                 |
-| `aws_region`              | string    |                   | AWS region (required when `use_bedrock: true`)                          |
-| `gcp_project_id`          | string    |                   | GCP project ID (required when `use_vertex: true`)                       |
-| `gcp_region`              | string    |                   | GCP region (required when `use_vertex: true`)                           |
-| `s3_state_bucket`         | string    |                   | S3 bucket for PR review state caching (opt-in; leave empty to disable)  |
-| `s3_state_prefix`         | string    | `claude-pr-state` | S3 key prefix for state objects                                         |
+| Input                      | Type      | Default           | Description                                                             |
+| -------------------------- | --------- | ----------------- | ----------------------------------------------------------------------- |
+| `prompt`                   | multiLine |                   | Inline prompt (mutually exclusive with `prompt_file`)                   |
+| `prompt_file`              | string    |                   | Path to a prompt file (mutually exclusive with `prompt`)                |
+| `allowed_tools`            | string    | see below         | Comma-separated list of tools Claude may use                            |
+| `disallowed_tools`         | string    |                   | Comma-separated list of tools Claude may not use                        |
+| `max_turns`                | string    |                   | Maximum conversation turns (default: no limit)                          |
+| `mcp_config`               | string    |                   | Path to an MCP config JSON file                                         |
+| `system_prompt`            | multiLine |                   | Override the system prompt                                              |
+| `append_system_prompt`     | multiLine |                   | Append to the default system prompt                                     |
+| `reviewer_terraform`       | boolean   | `false`           | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files |
+| `reviewer_yaml`            | boolean   | `false`           | Inject YAML/Kubernetes review standards; reads modified `.yaml` files   |
+| `reviewer_helm`            | boolean   | `false`           | Inject Helm chart review standards; reads modified chart files          |
+| `reviewer_cilium`          | boolean   | `false`           | Inject Cilium network policy review standards; reads modified CNP files |
+| `reviewer_dockerfile`      | boolean   | `false`           | Inject Dockerfile review standards; reads modified Dockerfiles          |
+| `reviewer_dotnet_core`     | boolean   | `false`           | Inject .NET Core review standards; reads modified `.cs`/`.csproj` files |
+| `reviewer_golang`          | boolean   | `false`           | Inject Go review standards; reads modified `.go` files                  |
+| `reviewer_java`            | boolean   | `false`           | Inject Java review standards; reads modified `.java` files              |
+| `reviewer_javascript`      | boolean   | `false`           | Inject JavaScript review standards; reads modified `.js`/`.mjs`/`.cjs`  |
+| `reviewer_nextjs`          | boolean   | `false`           | Inject Next.js review standards; reads modified `.tsx`/`.ts` files      |
+| `reviewer_php`             | boolean   | `false`           | Inject PHP review standards; reads modified `.php` files                |
+| `reviewer_powershell_core` | boolean   | `false`           | Inject PowerShell review standards; reads modified `.ps1`/`.psm1` files |
+| `reviewer_python`          | boolean   | `false`           | Inject Python review standards; reads modified `.py` files              |
+| `reviewer_rust`            | boolean   | `false`           | Inject Rust review standards; reads modified `.rs` files                |
+| `reviewer_sql`             | boolean   | `false`           | Inject SQL review standards; reads modified `.sql` files                |
+| `reviewer_typescript`      | boolean   | `false`           | Inject TypeScript review standards; reads modified `.ts`/`.tsx` files   |
+| `model`                    | string    | see below         | Model identifier (provider-specific format)                             |
+| `fallback_model`           | string    |                   | Fallback model when the primary is unavailable                          |
+| `claude_env`               | multiLine |                   | Custom environment variables (`KEY: VALUE` per line)                    |
+| `timeout_minutes`          | string    | `10`              | Execution timeout in minutes                                            |
+| `install_claude_cli`       | boolean   | `true`            | Install Claude CLI if absent; set to `false` when pre-installed         |
+| `use_node_cache`           | boolean   | `false`           | Cache Node.js dependencies (only for Node.js projects with lock files)  |
+| `post_pr_comments`         | boolean   | `true`            | Post issues as inline PR threads; requires `System.AccessToken`         |
+| `minimum_severity`         | pickList  | `WARNING`         | Minimum severity to post: `CRITICAL`, `WARNING`, or `SUGGESTION`        |
+| `anthropic_api_key`        | string    |                   | Anthropic API key                                                       |
+| `claude_code_oauth_token`  | string    |                   | Claude Code OAuth token (alternative to API key)                        |
+| `use_bedrock`              | boolean   | `false`           | Route requests through AWS Bedrock                                      |
+| `use_vertex`               | boolean   | `false`           | Route requests through Google Vertex AI                                 |
+| `aws_region`               | string    |                   | AWS region (required when `use_bedrock: true`)                          |
+| `gcp_project_id`           | string    |                   | GCP project ID (required when `use_vertex: true`)                       |
+| `gcp_region`               | string    |                   | GCP region (required when `use_vertex: true`)                           |
+| `s3_state_bucket`          | string    |                   | S3 bucket for PR review state caching (opt-in; leave empty to disable)  |
+| `s3_state_prefix`          | string    | `claude-pr-state` | S3 key prefix for state objects                                         |
 
 `use_bedrock` and `use_vertex` are mutually exclusive.
 

@@ -114,6 +114,94 @@
       "helpMarkDown": "Inject Dockerfile review standards (base image hygiene, layer ordering, security, multi-stage builds). Reads modified Dockerfiles."
     },
     {
+      "name": "reviewer_dotnet_core",
+      "type": "boolean",
+      "label": ".NET Core Review (.cs, .csproj)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject .NET Core review standards (async patterns, DI, security). Reads modified .cs and .csproj files."
+    },
+    {
+      "name": "reviewer_golang",
+      "type": "boolean",
+      "label": "Go Review (.go)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Go review standards (error handling, concurrency, resource management). Reads modified .go files."
+    },
+    {
+      "name": "reviewer_java",
+      "type": "boolean",
+      "label": "Java Review (.java)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Java review standards (resource management, null safety, thread safety). Reads modified .java files."
+    },
+    {
+      "name": "reviewer_javascript",
+      "type": "boolean",
+      "label": "JavaScript Review (.js, .mjs, .cjs)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject JavaScript review standards (language patterns, async, security). Reads modified .js, .mjs, and .cjs files."
+    },
+    {
+      "name": "reviewer_nextjs",
+      "type": "boolean",
+      "label": "Next.js Review (.tsx, .ts)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Next.js review standards (App Router, data fetching, server actions). Reads modified .tsx and .ts files."
+    },
+    {
+      "name": "reviewer_php",
+      "type": "boolean",
+      "label": "PHP Review (.php)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject PHP review standards (type safety, PSR-12, security). Reads modified .php files."
+    },
+    {
+      "name": "reviewer_powershell_core",
+      "type": "boolean",
+      "label": "PowerShell Review (.ps1, .psm1, .psd1)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject PowerShell review standards (parameter handling, CmdletBinding, security). Reads modified .ps1, .psm1, and .psd1 files."
+    },
+    {
+      "name": "reviewer_python",
+      "type": "boolean",
+      "label": "Python Review (.py)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Python review standards (type hints, resource management, security). Reads modified .py files."
+    },
+    {
+      "name": "reviewer_rust",
+      "type": "boolean",
+      "label": "Rust Review (.rs)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject Rust review standards (ownership, error handling, unsafe, concurrency). Reads modified .rs files."
+    },
+    {
+      "name": "reviewer_sql",
+      "type": "boolean",
+      "label": "SQL Review (.sql)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject SQL review standards (query correctness, schema design, migration safety). Reads modified .sql files."
+    },
+    {
+      "name": "reviewer_typescript",
+      "type": "boolean",
+      "label": "TypeScript Review (.ts, .tsx)",
+      "required": false,
+      "defaultValue": false,
+      "helpMarkDown": "Inject TypeScript review standards (type safety, async patterns, code quality). Reads modified .ts and .tsx files."
+    },
+    {
       "name": "model",
       "type": "string",
       "label": "Model",
