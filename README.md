@@ -202,7 +202,7 @@ When `s3_state_bucket` is set, the task persists per-PR review state to S3 so th
 
 ### How it works
 
-State is stored at `s3://{bucket}/{prefix}/{org}/{project}/{prId}/state.json` (e.g. `s3://my-bucket/claude-pr-state/my-org/MyProject/24963/state.json`) and includes:
+State is stored at `s3://{bucket}/{prefix}/{org}/{project}/{repoName}/{prId}/state.json` (e.g. `s3://my-bucket/claude-pr-state/my-org/MyProject/my-repo/24963/state.json`) and includes:
 
 - **Content hashes** for each changed file — re-review only the files that actually changed
 - **Posted fingerprints** — deduplicate issues already raised in a previous run so the PR is not flooded with duplicate threads
