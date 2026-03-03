@@ -31,7 +31,8 @@
     "src/run-claude.ts",
     "src/setup-claude-code-settings.ts",
     "src/validate-env.ts",
-    "src/validate-env-core.ts"
+    "src/validate-env-core.ts",
+    "src/context-dir.ts"
   ],
   "exclude": ["node_modules", "dist", "test", "**/*.test.ts", "**/*.spec.ts"]
 }
