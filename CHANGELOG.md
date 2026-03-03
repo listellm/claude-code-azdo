@@ -1,3 +1,9 @@
+## [3.8.0](https://github.com/listellm/claude-code-azdo/compare/v3.7.0...v3.8.0) (2026-03-03)
+
+### Features
+
+- add context_dir task input ([#30](https://github.com/listellm/claude-code-azdo/issues/30)) ([27cdd6f](https://github.com/listellm/claude-code-azdo/commit/27cdd6ff0829ff60b4948c5ccb91925e3d186158))
+
 ## [3.7.0](https://github.com/listellm/claude-code-azdo/compare/v3.6.0...v3.7.0) (2026-03-02)
 
 ### Features
