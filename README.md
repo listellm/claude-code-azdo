@@ -54,6 +54,7 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 | ---------------------------- | --------- | ----------------- | ----------------------------------------------------------------------------------------- |
 | `prompt`                     | multiLine |                   | Inline prompt (mutually exclusive with `prompt_file`)                                     |
 | `prompt_file`                | string    |                   | Path to a prompt file (mutually exclusive with `prompt`)                                  |
+| `context_dir`                | string    |                   | Directory of reference files injected into the system prompt (50 KB cap, non-recursive)   |
 | `allowed_tools`              | string    | see below         | Comma-separated list of tools Claude may use                                              |
 | `disallowed_tools`           | string    |                   | Comma-separated list of tools Claude may not use                                          |
 | `max_turns`                  | string    |                   | Maximum conversation turns (default: no limit)                                            |
@@ -98,6 +99,31 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 | `approve_pr_on_no_issues`    | boolean   | `false`           | Approve the PR when no new issues found; set to waiting-for-author when issues are posted |
 
 `use_bedrock` and `use_vertex` are mutually exclusive.
+
+## Context Directory
+
+Use `context_dir` to inject reference files (e.g. Helm values, config snippets, API specs) as read-only context into the system prompt. Files are read non-recursively, sorted alphabetically, and capped at 50 KB total.
+
+Works with both `prompt` and `prompt_file` — context is injected into the system prompt, not the user prompt, so there is no conflict.
+
+```yaml
+# Pre-fetch reference material, then review with context
+steps:
+  - script: |
+      mkdir -p $(Agent.TempDirectory)/context
+      helm get values my-release -n production \
+        > $(Agent.TempDirectory)/context/current-values.yaml
+    displayName: "Fetch Helm values"
+
+  - task: ClaudeCodeBaseTask@3
+    inputs:
+      prompt_file: "review-prompt.md"
+      context_dir: "$(Agent.TempDirectory)/context"
+      reviewer_helm: true
+      anthropic_api_key: "$(ANTHROPIC_API_KEY)"
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+```
 
 ## PR Review Comments
 
