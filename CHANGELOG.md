@@ -1,3 +1,9 @@
+## [3.8.1](https://github.com/listellm/claude-code-azdo/compare/v3.8.0...v3.8.1) (2026-03-03)
+
+### Bug Fixes
+
+- document context_dir in README and CLAUDE.md ([#31](https://github.com/listellm/claude-code-azdo/issues/31)) ([5df51e3](https://github.com/listellm/claude-code-azdo/commit/5df51e342a7c8b29386328c2cf8b84fb7d7d9fe7))
+
 ## [3.8.0](https://github.com/listellm/claude-code-azdo/compare/v3.7.0...v3.8.0) (2026-03-03)
 
 ### Features
