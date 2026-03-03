@@ -53,6 +53,10 @@ pnpm run publish:extension  # Publish to Azure DevOps Marketplace
 pnpm run publish:dry-run    # Dry-run publish
 ```
 
+## Known CI failures
+
+The `audit` CI job fails due to upstream CVEs in transitive dependencies of `azure-pipelines-task-lib` and `@anthropic-ai/bedrock-sdk` (e.g. `minimatch`, `fast-xml-parser`). These are not controllable by this project — the fixes must come from the upstream packages. This audit failure is **accepted** and should not block PRs or merges.
+
 ## Architecture
 
 This is an Azure DevOps extension that runs Claude Code inside Azure pipelines. The task definition is in `task.json`; the extension manifest is in `vss-extension.json`.

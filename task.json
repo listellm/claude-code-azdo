@@ -31,6 +31,13 @@
       "helpMarkDown": "Path to a file containing the prompt to send to Claude Code (mutually exclusive with prompt)"
     },
     {
+      "name": "context_dir",
+      "type": "string",
+      "label": "Context Directory",
+      "required": false,
+      "helpMarkDown": "Path to a directory containing reference files to inject as read-only context into the system prompt. Files are read non-recursively, sorted alphabetically, capped at 50 KB total. Intended for pre-fetched Helm chart values or other reference material. Works with both prompt and prompt_file."
+    },
+    {
       "name": "allowed_tools",
       "type": "string",
       "label": "Allowed Tools",

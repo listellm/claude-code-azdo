@@ -38,6 +38,7 @@ import {
   classifyThreadReplies,
   type ClassifierConfig,
 } from "./thread-classifier";
+import { buildContextPreamble } from "./context-dir";
 
 /**
  * Builds a PR context preamble from AzDo pipeline variables.
@@ -97,6 +98,7 @@ async function run(): Promise<void> {
 
     let rawPrompt = tl.getInput("prompt", false) ?? "";
     const promptFile = tl.getInput("prompt_file", false) ?? "";
+    const contextDir = tl.getInput("context_dir", false) ?? "";
     const preamble = buildPrPreamble(!!promptFile);
 
     const enabledReviewers: ReviewerTypeKey[] = [];
@@ -147,9 +149,18 @@ async function run(): Promise<void> {
     const userAppendSystemPrompt =
       tl.getInput("append_system_prompt", false) ?? undefined;
 
+    // --- Context directory injection (into system prompt) ---
+    const contextResult = await buildContextPreamble(contextDir);
+    if (contextResult.content) {
+      console.log(
+        `context_dir: injected ${contextResult.fileCount} file(s) (${contextResult.totalBytes.toLocaleString()} bytes) from '${contextDir}'`,
+      );
+    }
+
     const appendSystemPrompt =
       [
         reviewerSystemPrompt,
+        contextResult.content,
         userAppendSystemPrompt,
         postPrComments ? PR_ISSUES_INSTRUCTION : "",
       ]
