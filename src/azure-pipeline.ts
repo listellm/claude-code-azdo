@@ -28,9 +28,11 @@ import {
   buildCachePreamble,
   buildUpdatedState,
   computeDirtyFiles,
+  computePrDiff,
   hashPrompt,
   readPrState,
   writePrState,
+  type PrDiffResult,
   type PrState,
   type S3Config,
 } from "./pr-state";
@@ -65,16 +67,21 @@ function buildPrPreamble(usingPromptFile: boolean): string {
     lines.push(`Source branch: ${sourceBranch} → Target: ${targetBranch}`);
   }
 
-  if (targetBranch) {
-    lines.push(
-      "",
-      "Steps:",
-      `1. Run: git fetch origin ${targetBranch} 2>/dev/null || true`,
-      `2. Run: git diff origin/${targetBranch}...HEAD to see all changes`,
-    );
-  }
-
   return lines.join("\n") + "\n\n";
+}
+
+/**
+ * Formats a PrDiffResult into a prompt section containing the unified diff.
+ * Returns empty string when the diff is empty.
+ */
+function buildDiffPreamble(diffResult: PrDiffResult): string {
+  if (!diffResult.diff) return "";
+  const lines = ["PR diff (unified format):"];
+  if (diffResult.truncated) {
+    lines.push("(truncated to 200 KB — remainder omitted)");
+  }
+  lines.push("", "```diff", diffResult.diff, "```", "", "");
+  return lines.join("\n");
 }
 
 /**
@@ -312,8 +319,32 @@ async function run(): Promise<void> {
     }
     // --- end thread classification ---
 
+    // --- Inject PR diff ---
+    let diffPreamble = "";
+    if (targetBranch) {
+      // Skip diff entirely when S3 is active and all files are unchanged —
+      // cachePreamble already tells Claude to review for context only.
+      const skipDiff =
+        s3StateBucket &&
+        prId &&
+        dirtyFiles.length === 0 &&
+        Object.keys(fileHashes).length > 0;
+
+      if (!skipDiff) {
+        // When S3 enabled: diff only dirty files (unchanged files already cached)
+        // When S3 disabled: diff all changed files (dirtyFiles is empty — no filter)
+        const filesToDiff =
+          s3StateBucket && prId && dirtyFiles.length > 0
+            ? dirtyFiles
+            : undefined;
+        const diffResult = await computePrDiff(targetBranch, filesToDiff);
+        diffPreamble = buildDiffPreamble(diffResult);
+      }
+    }
+    // --- end PR diff ---
+
     const promptConfig = await preparePrompt({
-      prompt: preamble + cachePreamble + rawPrompt,
+      prompt: preamble + diffPreamble + cachePreamble + rawPrompt,
       promptFile,
     });
 

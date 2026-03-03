@@ -143,6 +143,39 @@ const defaultExecFn: ExecFn = async (cmd, args) => {
   return stdout;
 };
 
+export interface PrDiffResult {
+  diff: string;
+  truncated: boolean;
+}
+
+const MAX_DIFF_BYTES = 200_000;
+
+/**
+ * Computes the unified diff for the PR against the target branch.
+ * Optionally filters to specific files. Truncates at 200 KB.
+ * Returns empty diff (not truncated) on git failure — non-throwing.
+ */
+export async function computePrDiff(
+  targetBranch: string,
+  files?: string[],
+  execFn: ExecFn = defaultExecFn,
+): Promise<PrDiffResult> {
+  const args = ["diff", `origin/${targetBranch}...HEAD`];
+  if (files && files.length > 0) args.push("--", ...files);
+  try {
+    const raw = await execFn("git", args);
+    if (raw.length <= MAX_DIFF_BYTES) return { diff: raw, truncated: false };
+    // Truncate at the last newline to avoid partial lines in the diff
+    const truncated = raw.slice(0, MAX_DIFF_BYTES);
+    const lastNewline = truncated.lastIndexOf("\n");
+    const cleanCut =
+      lastNewline > 0 ? truncated.slice(0, lastNewline + 1) : truncated;
+    return { diff: cleanCut, truncated: true };
+  } catch {
+    return { diff: "", truncated: false };
+  }
+}
+
 /**
  * Computes which files in the current diff are "dirty" relative to cached state.
  *

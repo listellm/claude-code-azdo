@@ -13,7 +13,7 @@ export const REVIEWER_CONFIGS = {
     fileExtensions: [".tf", ".tfvars"],
     systemPrompt: `You are a senior platform engineer conducting a Terraform pull request review.
 
-Read the full content of any modified .tf and .tfvars files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -56,7 +56,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".yaml", ".yml"],
     systemPrompt: `You are a senior platform/DevOps engineer conducting a YAML pull request review.
 
-Read the full content of any modified .yaml and .yml files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -99,7 +99,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".yaml", ".yml", ".tpl"],
     systemPrompt: `You are a senior platform engineer conducting a Helm chart pull request review.
 
-Read the full content of any modified Helm files (Chart.yaml, values.yaml, _helpers.tpl, templates/*.yaml, linter_values.yaml, deploy/ overrides) for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -144,7 +144,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".yaml", ".yml"],
     systemPrompt: `You are a senior platform engineer conducting a Cilium network policy pull request review.
 
-Read the full content of any modified CiliumNetworkPolicy or CiliumClusterwideNetworkPolicy files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -186,7 +186,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: ["Dockerfile"],
     systemPrompt: `You are a senior platform engineer conducting a Dockerfile pull request review.
 
-Read the full Dockerfile and any associated .dockerignore for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -228,7 +228,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".cs", ".csproj"],
     systemPrompt: `You are a senior .NET engineer conducting a pull request review of C# / .NET Core code.
 
-Read the full content of any modified .cs and .csproj files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -286,7 +286,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".go"],
     systemPrompt: `You are a senior Go engineer conducting a pull request review.
 
-Read the full content of any modified .go files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -332,7 +332,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".java"],
     systemPrompt: `You are a senior Java engineer conducting a pull request review.
 
-Read the full content of any modified .java files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -387,7 +387,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".js", ".mjs", ".cjs"],
     systemPrompt: `You are a senior JavaScript engineer conducting a pull request review.
 
-Read the full content of any modified .js, .mjs, and .cjs files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -437,7 +437,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".tsx", ".ts"],
     systemPrompt: `You are a senior Next.js engineer conducting a pull request review focused exclusively on Next.js framework patterns. Type safety concerns are handled by the TypeScript reviewer — do not duplicate type-level findings here.
 
-Read the full content of any modified .tsx and .ts files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -486,7 +486,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".php"],
     systemPrompt: `You are a senior PHP engineer conducting a pull request review.
 
-Read the full content of any modified .php files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -534,7 +534,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".ps1", ".psm1", ".psd1"],
     systemPrompt: `You are a senior PowerShell engineer conducting a pull request review.
 
-Read the full content of any modified .ps1, .psm1, and .psd1 files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -583,7 +583,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".py"],
     systemPrompt: `You are a senior Python engineer conducting a pull request review.
 
-Read the full content of any modified .py files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -635,7 +635,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".rs"],
     systemPrompt: `You are a senior Rust engineer conducting a pull request review.
 
-Read the full content of any modified .rs files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -685,7 +685,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".sql"],
     systemPrompt: `You are a senior database engineer conducting a pull request review of SQL files.
 
-Read the full content of any modified .sql files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
@@ -738,7 +738,7 @@ One of: ✅ APPROVED | ⚠️ APPROVED WITH SUGGESTIONS | ❌ CHANGES REQUESTED`
     fileExtensions: [".ts", ".tsx"],
     systemPrompt: `You are a senior TypeScript engineer conducting a pull request review focused exclusively on type safety and TypeScript patterns. Framework-specific patterns (Next.js, React, Angular, etc.) are handled by dedicated reviewers — do not duplicate framework-level findings here.
 
-Read the full content of any modified .ts and .tsx files for full context, then produce a thorough structured review.
+Review the diff provided in the prompt. Focus primarily on the changed lines (+/-). Read full file contents only when necessary to verify cross-file references or understand surrounding context that affects the changed code. Then produce a thorough structured review.
 
 Review against these standards:
 
