@@ -3,6 +3,7 @@ import {
   buildCachePreamble,
   buildUpdatedState,
   computeDirtyFiles,
+  computePrDiff,
   deduplicateByFingerprints,
   hashContent,
   hashPrompt,
@@ -223,6 +224,73 @@ describe("computeDirtyFiles", () => {
     );
     expect(result.fileHashes["deleted.tf"]).toBe(hashContent(""));
     expect(result.dirtyFiles).toContain("deleted.tf");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computePrDiff
+// ---------------------------------------------------------------------------
+
+describe("computePrDiff", () => {
+  test("returns diff and truncated=false when git succeeds and diff is small", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      expect(args).toEqual(["diff", "origin/main...HEAD"]);
+      return "diff --git a/a.tf b/a.tf\n+added line\n";
+    };
+    const result = await computePrDiff("main", undefined, execFn);
+    expect(result.diff).toBe("diff --git a/a.tf b/a.tf\n+added line\n");
+    expect(result.truncated).toBe(false);
+  });
+
+  test("returns empty diff and truncated=false when git fails", async () => {
+    const execFn: ExecFn = async () => {
+      throw new Error("git not found");
+    };
+    const result = await computePrDiff("main", undefined, execFn);
+    expect(result.diff).toBe("");
+    expect(result.truncated).toBe(false);
+  });
+
+  test("truncates diff and sets truncated=true when diff exceeds 200 KB", async () => {
+    // Build a diff with newlines so truncation lands on a line boundary
+    const line = "x".repeat(99) + "\n"; // 100 bytes per line
+    const bigDiff = line.repeat(2001); // 200_100 bytes — exceeds limit
+    const execFn: ExecFn = async () => bigDiff;
+    const result = await computePrDiff("main", undefined, execFn);
+    expect(result.diff.length).toBeLessThanOrEqual(200_000);
+    expect(result.diff.endsWith("\n")).toBe(true);
+    expect(result.truncated).toBe(true);
+  });
+
+  test("passes file filter args when files provided", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      expect(args).toEqual([
+        "diff",
+        "origin/main...HEAD",
+        "--",
+        "a.tf",
+        "b.tf",
+      ]);
+      return "filtered diff\n";
+    };
+    const result = await computePrDiff("main", ["a.tf", "b.tf"], execFn);
+    expect(result.diff).toBe("filtered diff\n");
+  });
+
+  test("does not pass -- separator when files is undefined", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      expect(args).not.toContain("--");
+      return "";
+    };
+    await computePrDiff("main", undefined, execFn);
+  });
+
+  test("does not pass -- separator when files is empty array", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      expect(args).not.toContain("--");
+      return "";
+    };
+    await computePrDiff("main", [], execFn);
   });
 });
 

@@ -61,22 +61,22 @@ See [`azure-pipelines.yaml`](./azure-pipelines.yaml) for complete examples cover
 | `mcp_config`                 | string    |                   | Path to an MCP config JSON file                                                           |
 | `system_prompt`              | multiLine |                   | Override the system prompt                                                                |
 | `append_system_prompt`       | multiLine |                   | Append to the default system prompt                                                       |
-| `reviewer_terraform`         | boolean   | `false`           | Inject Terraform review standards; reads modified `.tf`/`.tfvars` files                   |
-| `reviewer_yaml`              | boolean   | `false`           | Inject YAML/Kubernetes review standards; reads modified `.yaml` files                     |
-| `reviewer_helm`              | boolean   | `false`           | Inject Helm chart review standards; reads modified chart files                            |
-| `reviewer_cilium`            | boolean   | `false`           | Inject Cilium network policy review standards; reads modified CNP files                   |
-| `reviewer_dockerfile`        | boolean   | `false`           | Inject Dockerfile review standards; reads modified Dockerfiles                            |
-| `reviewer_dotnet_core`       | boolean   | `false`           | Inject .NET Core review standards; reads modified `.cs`/`.csproj` files                   |
-| `reviewer_golang`            | boolean   | `false`           | Inject Go review standards; reads modified `.go` files                                    |
-| `reviewer_java`              | boolean   | `false`           | Inject Java review standards; reads modified `.java` files                                |
-| `reviewer_javascript`        | boolean   | `false`           | Inject JavaScript review standards; reads modified `.js`/`.mjs`/`.cjs`                    |
-| `reviewer_nextjs`            | boolean   | `false`           | Inject Next.js review standards; reads modified `.tsx`/`.ts` files                        |
-| `reviewer_php`               | boolean   | `false`           | Inject PHP review standards; reads modified `.php` files                                  |
-| `reviewer_powershell_core`   | boolean   | `false`           | Inject PowerShell review standards; reads modified `.ps1`/`.psm1` files                   |
-| `reviewer_python`            | boolean   | `false`           | Inject Python review standards; reads modified `.py` files                                |
-| `reviewer_rust`              | boolean   | `false`           | Inject Rust review standards; reads modified `.rs` files                                  |
-| `reviewer_sql`               | boolean   | `false`           | Inject SQL review standards; reads modified `.sql` files                                  |
-| `reviewer_typescript`        | boolean   | `false`           | Inject TypeScript review standards; reads modified `.ts`/`.tsx` files                     |
+| `reviewer_terraform`         | boolean   | `false`           | Inject Terraform review standards for `.tf`/`.tfvars` files                               |
+| `reviewer_yaml`              | boolean   | `false`           | Inject YAML/Kubernetes review standards for `.yaml`/`.yml` files                          |
+| `reviewer_helm`              | boolean   | `false`           | Inject Helm chart review standards for chart files                                        |
+| `reviewer_cilium`            | boolean   | `false`           | Inject Cilium network policy review standards for CNP files                               |
+| `reviewer_dockerfile`        | boolean   | `false`           | Inject Dockerfile review standards                                                        |
+| `reviewer_dotnet_core`       | boolean   | `false`           | Inject .NET Core review standards for `.cs`/`.csproj` files                               |
+| `reviewer_golang`            | boolean   | `false`           | Inject Go review standards for `.go` files                                                |
+| `reviewer_java`              | boolean   | `false`           | Inject Java review standards for `.java` files                                            |
+| `reviewer_javascript`        | boolean   | `false`           | Inject JavaScript review standards for `.js`/`.mjs`/`.cjs` files                          |
+| `reviewer_nextjs`            | boolean   | `false`           | Inject Next.js review standards for `.tsx`/`.ts` files                                    |
+| `reviewer_php`               | boolean   | `false`           | Inject PHP review standards for `.php` files                                              |
+| `reviewer_powershell_core`   | boolean   | `false`           | Inject PowerShell review standards for `.ps1`/`.psm1`/`.psd1` files                       |
+| `reviewer_python`            | boolean   | `false`           | Inject Python review standards for `.py` files                                            |
+| `reviewer_rust`              | boolean   | `false`           | Inject Rust review standards for `.rs` files                                              |
+| `reviewer_sql`               | boolean   | `false`           | Inject SQL review standards for `.sql` files                                              |
+| `reviewer_typescript`        | boolean   | `false`           | Inject TypeScript review standards for `.ts`/`.tsx` files                                 |
 | `model`                      | string    | see below         | Model identifier (provider-specific format)                                               |
 | `fallback_model`             | string    |                   | Fallback model when the primary is unavailable                                            |
 | `claude_env`                 | multiLine |                   | Custom environment variables (`KEY: VALUE` per line)                                      |

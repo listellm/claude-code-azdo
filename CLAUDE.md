@@ -69,6 +69,7 @@ azure-pipeline.ts        ← AzDo task entry point (Node22_1)
   → setup-claude-code-settings.ts ← Merges enableAllProjectMcpServers into ~/.claude/settings.json
   → azure-validate-env.ts← Reads task inputs, delegates to validate-env-core.ts
   → context-dir.ts       ← Reads context_dir files into appendSystemPrompt
+  → pr-state.ts          ← computePrDiff() injects unified diff into the prompt
   → prepare-prompt.ts    ← Validates/writes prompt to temp file (os.tmpdir()-based paths)
   → azure-run-claude.ts  ← Thin AzDo adapter: builds extraEnv from task inputs, calls runClaude()
       → run-claude.ts    ← Shared execution core: spawns claude, streams output, returns RunResult
@@ -128,7 +129,7 @@ Custom environment variables are passed as `KEY: VALUE` per line (colon-separate
 `src/reviewer-types.ts` defines the pluggable reviewer framework.
 
 - `ReviewerConfig` interface — `label`, `fileExtensions`, `systemPrompt`
-- `REVIEWER_CONFIGS` — keyed map of 5 reviewers: `terraform`, `yaml`, `helm`, `cilium`, `dockerfile`
+- `REVIEWER_CONFIGS` — keyed map of 16 reviewers: `terraform`, `yaml`, `helm`, `cilium`, `dockerfile`, `dotnet_core`, `golang`, `java`, `javascript`, `nextjs`, `php`, `powershell_core`, `python`, `rust`, `sql`, `typescript`
 - `ReviewerTypeKey` — `keyof typeof REVIEWER_CONFIGS`
 - `buildReviewerSystemPrompt(enabledTypes)` — concatenates `systemPrompt` strings for all enabled types, separated by `\n\n`; returns `""` when empty
 
@@ -178,6 +179,7 @@ Suppression mechanisms:
 
 - `readPrState()` / `writePrState()` — non-fatal S3 operations; return `null` / log warning on failure
 - `computeDirtyFiles(targetBranch, state, modelId, promptHash)` — runs `git diff --name-only origin/{target}...HEAD`, hashes each file's content at HEAD, compares against cached hashes. Full cache bust when `state` is null, model changes, or prompt hash changes
+- `computePrDiff(targetBranch, files?, execFn?)` — runs `git diff origin/{target}...HEAD`, optionally filtered to specific files. Truncates at 200 KB on a newline boundary. Returns `PrDiffResult` (`diff`, `truncated`). Non-throwing — returns empty diff on git failure. The diff is injected into the user prompt wrapped in a ` ```diff ` block so reviewers analyse changes without needing tool access to run git commands
 - `buildCachePreamble(dirtyFiles, allChangedFiles, state)` — injects context telling Claude which files are unchanged and where to focus. Returns `""` when all files are dirty
 - `mergeIssues(state, dirtyFiles, newIssues)` — carries forward cached issues from unchanged files
 - `deduplicateByFingerprints(issues, postedFingerprints)` — filters issues already posted
