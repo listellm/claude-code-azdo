@@ -1,3 +1,9 @@
+## [3.9.0](https://github.com/listellm/claude-code-azdo/compare/v3.8.1...v3.9.0) (2026-03-03)
+
+### Features
+
+- inject PR diff into prompt ([#32](https://github.com/listellm/claude-code-azdo/issues/32)) ([80abc31](https://github.com/listellm/claude-code-azdo/commit/80abc3186fa9083659bdc8d0efd63dd30cb8547b))
+
 ## [3.8.1](https://github.com/listellm/claude-code-azdo/compare/v3.8.0...v3.8.1) (2026-03-03)
 
 ### Bug Fixes

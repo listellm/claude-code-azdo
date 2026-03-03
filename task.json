@@ -10,8 +10,8 @@
   "author": "Anthropic",
   "version": {
     "Major": 3,
-    "Minor": 8,
-    "Patch": 1
+    "Minor": 9,
+    "Patch": 0
   },
   "minimumAgentVersion": "3.232.0",
   "instanceNameFormat": "Claude Code: $(prompt)",
