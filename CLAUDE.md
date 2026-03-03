@@ -68,6 +68,7 @@ azure-pipeline.ts        ← AzDo task entry point (Node22_1)
   → azure-setup.ts       ← Sets RUNNER_TEMP/CLAUDE_WORKING_DIR; installs claude CLI if absent
   → setup-claude-code-settings.ts ← Merges enableAllProjectMcpServers into ~/.claude/settings.json
   → azure-validate-env.ts← Reads task inputs, delegates to validate-env-core.ts
+  → context-dir.ts       ← Reads context_dir files into appendSystemPrompt
   → prepare-prompt.ts    ← Validates/writes prompt to temp file (os.tmpdir()-based paths)
   → azure-run-claude.ts  ← Thin AzDo adapter: builds extraEnv from task inputs, calls runClaude()
       → run-claude.ts    ← Shared execution core: spawns claude, streams output, returns RunResult
@@ -80,6 +81,8 @@ azure-pipeline.ts        ← AzDo task entry point (Node22_1)
 `src/azure-run-claude.ts` is a **thin AzDo adapter**: reads provider credentials from `tl.*`, builds an `extraEnv` record, calls `runClaude()`, then translates `RunResult` into `tl.setVariable` / `tl.setResult`.
 
 `src/validate-env-core.ts` contains **shared validation logic** for all three providers. Both `validate-env.ts` (reads `process.env`) and `azure-validate-env.ts` (reads `tl.*`) build a `ValidationConfig` object and delegate to `validateConfig()`.
+
+`src/context-dir.ts` reads files from the `context_dir` task input (non-recursive, alphabetically sorted, 50 KB cap) and returns a `ContextPreambleResult` (`content`, `fileCount`, `totalBytes`). The content is injected into `appendSystemPrompt` — not the user prompt — so it works alongside both `prompt` and `prompt_file`.
 
 ### Prompt delivery via named pipe
 
