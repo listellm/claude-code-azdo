@@ -56,7 +56,7 @@ stages:
             fetchDepth: 0
             displayName: "Checkout with full history"
 
-          - task: ClaudeCodeBaseTask@2
+          - task: ClaudeCodeBaseTask@3
             displayName: "Run Claude Code review"
             inputs:
               use_bedrock: true
