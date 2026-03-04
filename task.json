@@ -372,6 +372,42 @@
     {
       "name": "execution_file",
       "description": "Path to the JSON file containing Claude Code execution log"
+    },
+    {
+      "name": "total_cost_usd",
+      "description": "Total cost in USD as reported by Claude CLI (Anthropic pricing — not Bedrock/Vertex pricing)"
+    },
+    {
+      "name": "input_tokens",
+      "description": "Total input tokens consumed"
+    },
+    {
+      "name": "output_tokens",
+      "description": "Total output tokens consumed"
+    },
+    {
+      "name": "cache_read_input_tokens",
+      "description": "Input tokens served from prompt cache"
+    },
+    {
+      "name": "cache_creation_input_tokens",
+      "description": "Input tokens used for cache creation"
+    },
+    {
+      "name": "duration_ms",
+      "description": "Total wall-clock duration in milliseconds"
+    },
+    {
+      "name": "duration_api_ms",
+      "description": "Time spent in API calls in milliseconds"
+    },
+    {
+      "name": "num_turns",
+      "description": "Number of conversation turns"
+    },
+    {
+      "name": "model_usage_json",
+      "description": "Per-model breakdown as JSON array (model, tokens, cost per model)"
     }
   ],
   "execution": {

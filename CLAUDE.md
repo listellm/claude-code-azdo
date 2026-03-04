@@ -97,10 +97,16 @@ This avoids passing the prompt as a command-line argument.
 
 ### Output variables
 
-The task sets two AzDo output variables:
+The task sets AzDo output variables:
 
 - `conclusion` — `"success"` or `"failure"`
 - `execution_file` — path to `claude-execution-output.json` (NDJSON output aggregated into a JSON array using pure Node.js — no `jq` dependency)
+- `total_cost_usd` — total cost in USD as reported by Claude CLI (Anthropic pricing — not Bedrock/Vertex pricing)
+- `input_tokens` / `output_tokens` — total token counts
+- `cache_read_input_tokens` / `cache_creation_input_tokens` — prompt cache token counts
+- `duration_ms` / `duration_api_ms` — wall-clock and API durations in milliseconds
+- `num_turns` — number of conversation turns
+- `model_usage_json` — per-model breakdown as JSON array (`model`, `inputTokens`, `outputTokens`, `cacheReadInputTokens`, `cacheCreationInputTokens`, `costUSD`)
 
 ### Provider authentication
 

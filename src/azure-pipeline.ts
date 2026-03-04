@@ -41,6 +41,7 @@ import {
   type ClassifierConfig,
 } from "./thread-classifier";
 import { buildContextPreamble } from "./context-dir";
+import { extractUsage, logUsageSummary, type UsageSummary } from "./usage-core";
 
 /**
  * Builds a PR context preamble from AzDo pipeline variables.
@@ -95,6 +96,24 @@ function invertThreadMap(
     inverted.set(threadId, fp);
   }
   return inverted;
+}
+
+function setUsageVariables(summary: UsageSummary): void {
+  tl.setVariable("total_cost_usd", summary.totalCostUSD.toString());
+  tl.setVariable("input_tokens", summary.usage.inputTokens.toString());
+  tl.setVariable("output_tokens", summary.usage.outputTokens.toString());
+  tl.setVariable(
+    "cache_read_input_tokens",
+    summary.usage.cacheReadInputTokens.toString(),
+  );
+  tl.setVariable(
+    "cache_creation_input_tokens",
+    summary.usage.cacheCreationInputTokens.toString(),
+  );
+  tl.setVariable("duration_ms", summary.durationMs.toString());
+  tl.setVariable("duration_api_ms", summary.durationApiMs.toString());
+  tl.setVariable("num_turns", summary.numTurns.toString());
+  tl.setVariable("model_usage_json", JSON.stringify(summary.modelUsage));
 }
 
 async function run(): Promise<void> {
@@ -359,6 +378,19 @@ async function run(): Promise<void> {
       fallbackModel: tl.getInput("fallback_model", false) ?? undefined,
       timeoutMinutes: tl.getInput("timeout_minutes", false) ?? undefined,
     });
+
+    // --- Usage extraction ---
+    const usageSummary = result.executionFile
+      ? await extractUsage(result.executionFile)
+      : null;
+
+    if (usageSummary) {
+      logUsageSummary(usageSummary);
+      setUsageVariables(usageSummary);
+    } else if (result.executionFile) {
+      console.warn("Could not extract usage data from execution output");
+    }
+    // --- end usage extraction ---
 
     let postedIssues: import("./pr-comment-core").ReviewIssue[] = [];
     let newThreadMap: Record<string, number> = {};

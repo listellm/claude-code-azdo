@@ -1,5 +1,5 @@
 import * as https from "https";
-import { readFile } from "fs/promises";
+import { readResultEntry } from "./execution-file";
 
 export const ACCEPT_KEYWORD = "#accept";
 
@@ -82,37 +82,15 @@ export async function extractIssues(
   executionFile: string,
   minimumSeverity: string = "WARNING",
 ): Promise<ReviewIssue[]> {
-  let raw: string;
-  try {
-    raw = await readFile(executionFile, "utf8");
-  } catch {
-    return [];
-  }
-
-  let entries: unknown[];
-  try {
-    entries = JSON.parse(raw) as unknown[];
-  } catch {
-    return [];
-  }
-
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-
-  const resultEntry = entries.find(
-    (e): e is { type: string; result: string } =>
-      typeof e === "object" &&
-      e !== null &&
-      (e as Record<string, unknown>)["type"] === "result" &&
-      typeof (e as Record<string, unknown>)["result"] === "string",
-  );
-
+  const resultEntry = await readResultEntry(executionFile);
   if (!resultEntry) {
     return [];
   }
 
-  const resultText: string = resultEntry.result;
+  if (typeof resultEntry["result"] !== "string") {
+    return [];
+  }
+  const resultText: string = resultEntry["result"];
 
   // Find the last ```json ... ``` block in the result text
   const jsonBlockPattern = /```json\s*([\s\S]*?)\s*```/g;

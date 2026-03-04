@@ -18,7 +18,7 @@ An Azure DevOps extension that runs [Claude Code](https://www.anthropic.com/clau
 - **Tool control**: Configurable allowed/disallowed tools
 - **MCP support**: Pass an MCP config file for external integrations
 - **Custom environment**: Inject environment variables into Claude's execution
-- **Output variables**: `conclusion` and `execution_file` for downstream steps
+- **Output variables**: `conclusion`, `execution_file`, token usage, and cost data for downstream steps
 - **PR review comments**: Posts issues as inline PR threads with severity filtering
 - **Noise suppression**: Accept issues per-file via `/accept` reply, or permanently via `claude-ignore` inline markers
 
@@ -875,10 +875,24 @@ This avoids shell argument length limits and keeps the prompt off the process ta
 
 ## Task Outputs
 
-| Output           | Description                                   |
-| ---------------- | --------------------------------------------- |
-| `conclusion`     | `success` or `failure`                        |
-| `execution_file` | Path to the NDJSON execution log (JSON array) |
+| Output                        | Description                                                       |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `conclusion`                  | `success` or `failure`                                            |
+| `execution_file`              | Path to the NDJSON execution log (JSON array)                     |
+| `total_cost_usd`              | Total cost in USD as reported by Claude CLI (see caveat below)    |
+| `input_tokens`                | Total input tokens consumed                                       |
+| `output_tokens`               | Total output tokens consumed                                      |
+| `cache_read_input_tokens`     | Input tokens served from prompt cache                             |
+| `cache_creation_input_tokens` | Input tokens used for cache creation                              |
+| `duration_ms`                 | Total wall-clock duration in milliseconds                         |
+| `duration_api_ms`             | Time spent in API calls in milliseconds                           |
+| `num_turns`                   | Number of conversation turns                                      |
+| `model_usage_json`            | Per-model breakdown as JSON array (model, tokens, cost per model) |
+
+> **Bedrock / Vertex cost caveat**: `total_cost_usd` is calculated by the Claude CLI using
+> Anthropic direct-API pricing. When using AWS Bedrock or Google Vertex AI, the actual billed
+> cost differs. Use the raw token counts (`input_tokens`, `output_tokens`, `cache_*` fields)
+> together with your provider's pricing table to calculate actual costs.
 
 ## Authentication
 
@@ -985,7 +999,33 @@ Pass extra environment variables to Claude's execution context using `KEY: VALUE
 - script: |
     echo "Conclusion: $(claudeTask.conclusion)"
     echo "Execution log: $(claudeTask.execution_file)"
+    echo "Cost: $(claudeTask.total_cost_usd) USD"
+    echo "Input tokens: $(claudeTask.input_tokens)"
+    echo "Output tokens: $(claudeTask.output_tokens)"
+    echo "Duration: $(claudeTask.duration_ms) ms"
   displayName: "Check Claude output"
+```
+
+### Calculating Bedrock costs from token counts
+
+When using AWS Bedrock, use the raw token counts to calculate actual costs against your pricing:
+
+```yaml
+- task: ClaudeCodeBaseTask@3
+  name: claudeTask
+  inputs:
+    prompt: "Review this PR."
+    use_bedrock: true
+    aws_region: "us-east-1"
+    model: "us.anthropic.claude-sonnet-4-5-20251001-v1:0"
+
+- script: |
+    echo "Input tokens: $(claudeTask.input_tokens)"
+    echo "Output tokens: $(claudeTask.output_tokens)"
+    echo "Cache read tokens: $(claudeTask.cache_read_input_tokens)"
+    echo "Cache creation tokens: $(claudeTask.cache_creation_input_tokens)"
+    echo "Per-model breakdown: $(claudeTask.model_usage_json)"
+  displayName: "Token usage for Bedrock billing"
 ```
 
 ## Development
