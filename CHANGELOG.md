@@ -1,3 +1,9 @@
+## [3.10.0](https://github.com/listellm/claude-code-azdo/compare/v3.9.0...v3.10.0) (2026-03-04)
+
+### Features
+
+- usage extraction and output variables ([#33](https://github.com/listellm/claude-code-azdo/issues/33)) ([eee6d6a](https://github.com/listellm/claude-code-azdo/commit/eee6d6a5b82c95133306940f450d01edef2d2838))
+
 ## [3.9.0](https://github.com/listellm/claude-code-azdo/compare/v3.8.1...v3.9.0) (2026-03-03)
 
 ### Features

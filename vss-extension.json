@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "claude-code-base-task",
   "name": "Claude Code Base Task",
-  "version": "3.9.0",
+  "version": "3.10.0",
   "publisher": "listellm",
   "targets": [
     {
