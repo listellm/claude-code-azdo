@@ -36,7 +36,7 @@ stages:
             fetchDepth: 0
             displayName: "Checkout with full history"
 
-          - task: ClaudeCodeBaseTask@2
+          - task: ClaudeCodeBaseTask@3
             displayName: "Run Claude Code review"
             env:
               # Bedrock credentials are read from the environment by the task
