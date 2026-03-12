@@ -43,6 +43,7 @@ import {
   type ClassifierConfig,
 } from "./thread-classifier";
 import { buildContextPreamble } from "./context-dir";
+import { sanitiseContent, sanitiseDiffContent } from "./sanitise";
 import { extractUsage, logUsageSummary, type UsageSummary } from "./usage-core";
 
 const CLAUDE_MD_INSTRUCTION =
@@ -59,12 +60,18 @@ function buildPrPreamble(usingPromptFile: boolean): string {
   const prId = tl.getVariable("System.PullRequest.PullRequestId");
   if (!prId) return "";
 
-  const repoName = tl.getVariable("Build.Repository.Name") ?? "";
-  const prTitle = tl.getVariable("System.PullRequest.PullRequestTitle") ?? "";
-  const sourceBranch =
-    tl.getVariable("System.PullRequest.SourceBranchName") ?? "";
-  const targetBranch =
-    tl.getVariable("System.PullRequest.TargetBranchName") ?? "";
+  const repoName = sanitiseContent(
+    tl.getVariable("Build.Repository.Name") ?? "",
+  );
+  const prTitle = sanitiseContent(
+    tl.getVariable("System.PullRequest.PullRequestTitle") ?? "",
+  );
+  const sourceBranch = sanitiseContent(
+    tl.getVariable("System.PullRequest.SourceBranchName") ?? "",
+  );
+  const targetBranch = sanitiseContent(
+    tl.getVariable("System.PullRequest.TargetBranchName") ?? "",
+  );
 
   const lines: string[] = ["<pipeline_context>"];
   if (repoName) lines.push(`Repository: ${repoName}`);
@@ -87,7 +94,14 @@ function buildDiffPreamble(diffResult: PrDiffResult): string {
   if (diffResult.truncated) {
     lines.push("(truncated to 200 KB, remainder omitted)");
   }
-  lines.push("```diff", diffResult.diff, "```", "</pr_diff>", "", "");
+  lines.push(
+    "```diff",
+    sanitiseDiffContent(diffResult.diff),
+    "```",
+    "</pr_diff>",
+    "",
+    "",
+  );
   return lines.join("\n");
 }
 

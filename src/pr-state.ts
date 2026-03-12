@@ -7,6 +7,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { issueFingerprint, type ReviewIssue } from "./pr-comment-core";
+import { sanitiseDiffContent } from "./sanitise";
 
 const execFileAsync = promisify(execFile);
 
@@ -264,14 +265,14 @@ export function buildCachePreamble(
 
   const focusTarget =
     dirtyFiles.length > 0
-      ? dirtyFiles.join(", ")
+      ? sanitiseDiffContent(dirtyFiles.join(", "))
       : "(all files unchanged — review for context only)";
 
   return [
     "<cache_context>",
     `The following files are unchanged from the previous review and their issues are already captured. Focus your review on: ${focusTarget}.`,
     "You may still read unchanged files for context.",
-    `Unchanged files (already reviewed): ${unchangedFiles.join(", ")}`,
+    `Unchanged files (already reviewed): ${sanitiseDiffContent(unchangedFiles.join(", "))}`,
     "</cache_context>",
     "",
     "",
@@ -328,7 +329,7 @@ export async function computeChangedFilesSummary(
  */
 export function buildChangedFilesPreamble(summary: string): string {
   if (!summary) return "";
-  return `<changed_files>\n${summary}\n</changed_files>\n\n`;
+  return `<changed_files>\n${sanitiseDiffContent(summary)}\n</changed_files>\n\n`;
 }
 
 /**

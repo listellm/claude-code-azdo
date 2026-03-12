@@ -1,6 +1,7 @@
 import * as path from "path";
 import { readdir, readFile, stat } from "fs/promises";
 import type { Stats } from "fs";
+import { sanitiseContent } from "./sanitise";
 
 /** Maximum total bytes of file content before truncation. */
 export const MAX_CONTEXT_BYTES = 50 * 1024;
@@ -108,6 +109,7 @@ export async function buildContextPreamble(
       continue;
     }
 
+    content = sanitiseContent(content);
     const contentBytes = Buffer.byteLength(content, "utf-8");
     if (totalBytes + contentBytes > MAX_CONTEXT_BYTES) {
       console.warn(
