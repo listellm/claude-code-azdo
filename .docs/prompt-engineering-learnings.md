@@ -350,7 +350,7 @@ implementation's approach to MCP server configuration. No change needed.
 | 3 | Structured review instructions (#3) | Low | Low | ✅ Done (M1) |
 | 4 | CLAUDE.md instruction (#11) | Low | Low | ✅ Done (M1) |
 | 5 | Content sanitisation (#4) | Medium (new code) | Medium | ✅ Done (M2) |
-| 6 | Bash tool restriction (#5) | Low | Low | Pending (M3) |
+| 6 | Bash tool restriction (#5) | Low | Low | ✅ Done (M3) |
 
 Findings 6-10, 12-14 are observations or deferred.
 
@@ -426,31 +426,33 @@ sanitisation logic without prompt structure noise.
 
 ---
 
-### Milestone 3: Bash tool restriction for review mode
+### Milestone 3: Bash tool restriction for review mode ✅ COMPLETE
 
 **Finding:** #5
 **Risk:** Low | **Effort:** Low | **Delivery:** Own PR
+**Completed:** 2026-03-12
 
 Behavioural change that could affect existing pipelines using reviewers.
 Ships last so users can adopt M1 and M2 without friction, then opt into
 tighter tool restrictions.
 
-**Scope:**
+**What was delivered:**
 
-- When reviewers are enabled and no explicit `allowed_tools` is set, default to read-only tools: `Read,Glob,Grep,Bash(git diff:*),Bash(git log:*),Bash(git show:*)`
-- Add `WebSearch,WebFetch` to default `disallowed_tools`
+- New `src/review-tools.ts` with pure function `resolveToolRestrictions()` implementing the behaviour matrix:
+  - No reviewers, no user override: `Bash,Read,Glob,Grep` (code default, matches previous `task.json` default)
+  - No reviewers, user sets `allowed_tools`: user value passed through
+  - Reviewers enabled, no user override: `Read,Glob,Grep,Bash(git diff:*),Bash(git log:*),Bash(git show:*)`
+  - Reviewers enabled, user overrides `allowed_tools`: user value respected
+  - Reviewers enabled (all cases): `WebSearch,WebFetch` merged into `disallowed_tools` with deduplication
+- Removed `defaultValue` from `allowed_tools` in `task.json` so `tl.getInput()` returns `undefined` when unset, allowing code to distinguish "user explicitly set" from "using default"
+- Updated `helpMarkDown` on `allowed_tools` to document auto-restriction behaviour
+- Log line emitted when review-mode restriction is applied
 
-**Files:**
+**Files changed:**
 
-- `src/azure-pipeline.ts` (tool restriction logic)
-- `task.json` (document default restriction behaviour)
-- Tests covering the conditional default
+- `src/review-tools.ts` (new, constants + `resolveToolRestrictions()` pure function + `mergeDisallowedTools()` helper)
+- `test/review-tools.test.ts` (new, 12 tests: 9 behaviour matrix cases + 3 constant validations)
+- `src/azure-pipeline.ts` (import + wire `resolveToolRestrictions()`, replace inline `tl.getInput` with resolved values)
+- `task.json` (remove `defaultValue` on `allowed_tools`, update `helpMarkDown`)
 
-**Verification:**
-
-```bash
-pnpm test
-pnpm run typecheck
-```
-
-Manually verify that existing pipelines without reviewers are unaffected.
+**Verification:** 358 tests pass (14 files), typecheck clean, format clean.

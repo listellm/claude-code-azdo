@@ -43,6 +43,7 @@ import {
   type ClassifierConfig,
 } from "./thread-classifier";
 import { buildContextPreamble } from "./context-dir";
+import { resolveToolRestrictions } from "./review-tools";
 import { sanitiseContent, sanitiseDiffContent } from "./sanitise";
 import { extractUsage, logUsageSummary, type UsageSummary } from "./usage-core";
 
@@ -410,9 +411,25 @@ async function run(): Promise<void> {
       promptFile,
     });
 
+    const userAllowedTools = tl.getInput("allowed_tools", false) ?? undefined;
+    const userDisallowedTools =
+      tl.getInput("disallowed_tools", false) ?? undefined;
+
+    const toolRestrictions = resolveToolRestrictions({
+      reviewersEnabled: enabledReviewers.length > 0,
+      userAllowedTools,
+      userDisallowedTools,
+    });
+
+    if (enabledReviewers.length > 0 && !userAllowedTools) {
+      console.log(
+        "Review mode: Bash restricted to read-only git commands (git diff, git log, git show)",
+      );
+    }
+
     const result = await runClaudeAzure(promptConfig.path, {
-      allowedTools: tl.getInput("allowed_tools", false) ?? undefined,
-      disallowedTools: tl.getInput("disallowed_tools", false) ?? undefined,
+      allowedTools: toolRestrictions.allowedTools,
+      disallowedTools: toolRestrictions.disallowedTools,
       maxTurns: tl.getInput("max_turns", false) ?? undefined,
       mcpConfig: tl.getInput("mcp_config", false) ?? undefined,
       systemPrompt: tl.getInput("system_prompt", false) ?? undefined,
