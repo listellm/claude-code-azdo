@@ -26,7 +26,9 @@ import {
 } from "./reviewer-types";
 import {
   buildCachePreamble,
+  buildChangedFilesPreamble,
   buildUpdatedState,
+  computeChangedFilesSummary,
   computeDirtyFiles,
   computePrDiff,
   hashPrompt,
@@ -42,6 +44,9 @@ import {
 } from "./thread-classifier";
 import { buildContextPreamble } from "./context-dir";
 import { extractUsage, logUsageSummary, type UsageSummary } from "./usage-core";
+
+const CLAUDE_MD_INSTRUCTION =
+  "IMPORTANT: Always check for and follow the repository's CLAUDE.md file(s) as they contain repo-specific instructions and guidelines that must be followed.";
 
 /**
  * Builds a PR context preamble from AzDo pipeline variables.
@@ -61,12 +66,13 @@ function buildPrPreamble(usingPromptFile: boolean): string {
   const targetBranch =
     tl.getVariable("System.PullRequest.TargetBranchName") ?? "";
 
-  const lines: string[] = ["Pipeline context:"];
+  const lines: string[] = ["<pipeline_context>"];
   if (repoName) lines.push(`Repository: ${repoName}`);
   if (prTitle) lines.push(`PR: ${prTitle}`);
   if (sourceBranch || targetBranch) {
     lines.push(`Source branch: ${sourceBranch} → Target: ${targetBranch}`);
   }
+  lines.push("</pipeline_context>");
 
   return lines.join("\n") + "\n\n";
 }
@@ -77,11 +83,11 @@ function buildPrPreamble(usingPromptFile: boolean): string {
  */
 function buildDiffPreamble(diffResult: PrDiffResult): string {
   if (!diffResult.diff) return "";
-  const lines = ["PR diff (unified format):"];
+  const lines = ["<pr_diff>"];
   if (diffResult.truncated) {
-    lines.push("(truncated to 200 KB — remainder omitted)");
+    lines.push("(truncated to 200 KB, remainder omitted)");
   }
-  lines.push("", "```diff", diffResult.diff, "```", "", "");
+  lines.push("```diff", diffResult.diff, "```", "</pr_diff>", "", "");
   return lines.join("\n");
 }
 
@@ -157,7 +163,16 @@ async function run(): Promise<void> {
     const reviewerSystemPrompt = buildReviewerSystemPrompt(enabledReviewers);
 
     if (enabledReviewers.length > 0 && rawPrompt === "" && promptFile === "") {
-      rawPrompt = "Perform the review.";
+      rawPrompt = [
+        "Review the PR changes below.",
+        "",
+        "Steps:",
+        "1. Read <changed_files> for scope (if present), then <pr_diff> for detail.",
+        "2. Apply the review criteria from your system instructions to each changed file.",
+        "3. For each issue found, record severity (CRITICAL/WARNING/SUGGESTION), file path, and line number.",
+        "4. After completing the review, emit the required JSON block as the final element of your response.",
+        "   If no issues are found, emit an empty array [].",
+      ].join("\n");
     }
 
     const postPrComments = tl.getBoolInput("post_pr_comments", false);
@@ -185,6 +200,7 @@ async function run(): Promise<void> {
 
     const appendSystemPrompt =
       [
+        CLAUDE_MD_INSTRUCTION,
         reviewerSystemPrompt,
         contextResult.content,
         userAppendSystemPrompt,
@@ -362,8 +378,21 @@ async function run(): Promise<void> {
     }
     // --- end PR diff ---
 
+    // --- Changed files summary ---
+    let changedFilesPreamble = "";
+    if (targetBranch) {
+      const summary = await computeChangedFilesSummary(targetBranch);
+      changedFilesPreamble = buildChangedFilesPreamble(summary);
+    }
+    // --- end changed files summary ---
+
     const promptConfig = await preparePrompt({
-      prompt: preamble + diffPreamble + cachePreamble + rawPrompt,
+      prompt:
+        preamble +
+        changedFilesPreamble +
+        diffPreamble +
+        cachePreamble +
+        rawPrompt,
       promptFile,
     });
 
