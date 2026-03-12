@@ -1,3 +1,9 @@
+## [3.11.0](https://github.com/listellm/claude-code-azdo/compare/v3.10.0...v3.11.0) (2026-03-12)
+
+### Features
+
+- restrict Bash to git read-only in review mode (M3) ([#34](https://github.com/listellm/claude-code-azdo/issues/34)) ([e81924a](https://github.com/listellm/claude-code-azdo/commit/e81924a8e853dc1f404a0be6318766f55ca0ff3c))
+
 ## [3.10.0](https://github.com/listellm/claude-code-azdo/compare/v3.9.0...v3.10.0) (2026-03-04)
 
 ### Features
