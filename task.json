@@ -42,8 +42,7 @@
       "type": "string",
       "label": "Allowed Tools",
       "required": false,
-      "defaultValue": "Bash,Read,Glob,Grep",
-      "helpMarkDown": "Comma-separated list of allowed tools for Claude Code to use"
+      "helpMarkDown": "Comma-separated list of allowed tools for Claude Code to use. Defaults to 'Bash,Read,Glob,Grep'. When reviewers are enabled and this input is not set, Bash is automatically restricted to read-only git commands (git diff, git log, git show)."
     },
     {
       "name": "disallowed_tools",

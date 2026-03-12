@@ -1,7 +1,9 @@
 import { describe, test, expect } from "vitest";
 import {
   buildCachePreamble,
+  buildChangedFilesPreamble,
   buildUpdatedState,
+  computeChangedFilesSummary,
   computeDirtyFiles,
   computePrDiff,
   deduplicateByFingerprints,
@@ -334,11 +336,109 @@ describe("buildCachePreamble", () => {
     expect(preamble).toContain("unchanged");
   });
 
+  test("wraps output in <cache_context> XML tags", () => {
+    const preamble = buildCachePreamble(["a.tf"], ["a.tf", "b.tf"], state);
+    expect(preamble).toMatch(/^<cache_context>\n/);
+    expect(preamble).toContain("</cache_context>");
+  });
+
   test("handles no dirty files (all unchanged)", () => {
     const preamble = buildCachePreamble([], ["a.tf", "b.tf"], state);
     expect(preamble).toContain("all files unchanged");
     expect(preamble).toContain("a.tf");
     expect(preamble).toContain("b.tf");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeChangedFilesSummary
+// ---------------------------------------------------------------------------
+
+describe("computeChangedFilesSummary", () => {
+  test("returns formatted summary with change types and line counts", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      if (args.includes("--numstat")) {
+        return "5\t3\tsrc/main.ts\n10\t0\tsrc/new.ts\n";
+      }
+      if (args.includes("--name-status")) {
+        return "M\tsrc/main.ts\nA\tsrc/new.ts\n";
+      }
+      throw new Error(`Unexpected: ${args.join(" ")}`);
+    };
+    const result = await computeChangedFilesSummary("main", execFn);
+    expect(result).toBe(
+      "- src/main.ts (MODIFIED) +5/-3\n- src/new.ts (ADDED) +10/-0",
+    );
+  });
+
+  test("handles renamed files (R100 status)", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      if (args.includes("--numstat")) {
+        return "0\t0\tnew-name.ts\n";
+      }
+      if (args.includes("--name-status")) {
+        return "R100\told-name.ts\tnew-name.ts\n";
+      }
+      throw new Error(`Unexpected: ${args.join(" ")}`);
+    };
+    const result = await computeChangedFilesSummary("main", execFn);
+    expect(result).toBe("- new-name.ts (RENAMED) +0/-0");
+  });
+
+  test("handles deleted files", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      if (args.includes("--numstat")) {
+        return "0\t20\tremoved.ts\n";
+      }
+      if (args.includes("--name-status")) {
+        return "D\tremoved.ts\n";
+      }
+      throw new Error(`Unexpected: ${args.join(" ")}`);
+    };
+    const result = await computeChangedFilesSummary("main", execFn);
+    expect(result).toBe("- removed.ts (DELETED) +0/-20");
+  });
+
+  test("returns empty string when git fails", async () => {
+    const execFn: ExecFn = async () => {
+      throw new Error("git not found");
+    };
+    const result = await computeChangedFilesSummary("main", execFn);
+    expect(result).toBe("");
+  });
+
+  test("handles binary files (- - in numstat)", async () => {
+    const execFn: ExecFn = async (_cmd, args) => {
+      if (args.includes("--numstat")) return "-\t-\timage.png\n";
+      if (args.includes("--name-status")) return "M\timage.png\n";
+      throw new Error(`Unexpected: ${args.join(" ")}`);
+    };
+    const result = await computeChangedFilesSummary("main", execFn);
+    expect(result).toBe("- image.png (MODIFIED) binary");
+  });
+
+  test("returns empty string when no files changed", async () => {
+    const execFn: ExecFn = async () => "";
+    const result = await computeChangedFilesSummary("main", execFn);
+    expect(result).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildChangedFilesPreamble
+// ---------------------------------------------------------------------------
+
+describe("buildChangedFilesPreamble", () => {
+  test("wraps summary in <changed_files> XML tags", () => {
+    const summary = "- src/main.ts (MODIFIED) +5/-3";
+    const result = buildChangedFilesPreamble(summary);
+    expect(result).toBe(
+      "<changed_files>\n- src/main.ts (MODIFIED) +5/-3\n</changed_files>\n\n",
+    );
+  });
+
+  test("returns empty string for empty summary", () => {
+    expect(buildChangedFilesPreamble("")).toBe("");
   });
 });
 

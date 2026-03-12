@@ -7,6 +7,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { issueFingerprint, type ReviewIssue } from "./pr-comment-core";
+import { sanitiseDiffContent } from "./sanitise";
 
 const execFileAsync = promisify(execFile);
 
@@ -150,6 +151,15 @@ export interface PrDiffResult {
 
 const MAX_DIFF_BYTES = 200_000;
 
+const STATUS_LABELS: Record<string, string> = {
+  A: "ADDED",
+  M: "MODIFIED",
+  D: "DELETED",
+  R: "RENAMED",
+  C: "COPIED",
+  T: "TYPE CHANGED",
+};
+
 /**
  * Computes the unified diff for the PR against the target branch.
  * Optionally filters to specific files. Truncates at 200 KB.
@@ -255,17 +265,71 @@ export function buildCachePreamble(
 
   const focusTarget =
     dirtyFiles.length > 0
-      ? dirtyFiles.join(", ")
+      ? sanitiseDiffContent(dirtyFiles.join(", "))
       : "(all files unchanged — review for context only)";
 
   return [
-    "Cache context from previous review run:",
+    "<cache_context>",
     `The following files are unchanged from the previous review and their issues are already captured. Focus your review on: ${focusTarget}.`,
     "You may still read unchanged files for context.",
-    `Unchanged files (already reviewed): ${unchangedFiles.join(", ")}`,
+    `Unchanged files (already reviewed): ${sanitiseDiffContent(unchangedFiles.join(", "))}`,
+    "</cache_context>",
     "",
     "",
   ].join("\n");
+}
+
+/**
+ * Computes a per-file summary of changes: change type (A/M/D/R) and line counts.
+ * Returns a formatted string or empty string on failure.
+ */
+export async function computeChangedFilesSummary(
+  targetBranch: string,
+  execFn: ExecFn = defaultExecFn,
+): Promise<string> {
+  try {
+    const [numstatRaw, nameStatusRaw] = await Promise.all([
+      execFn("git", ["diff", "--numstat", `origin/${targetBranch}...HEAD`]),
+      execFn("git", ["diff", "--name-status", `origin/${targetBranch}...HEAD`]),
+    ]);
+
+    // Parse --name-status into a map: filepath → change type
+    const statusMap = new Map<string, string>();
+    for (const line of nameStatusRaw.split("\n").filter(Boolean)) {
+      const parts = line.split("\t");
+      const code = parts[0]?.charAt(0) ?? "M";
+      // For renames (R100\told\tnew), use the new path
+      const filePath = parts.length >= 3 ? parts[2]! : parts[1]!;
+      statusMap.set(filePath, STATUS_LABELS[code] ?? "MODIFIED");
+    }
+
+    // Parse --numstat into summary lines
+    const lines: string[] = [];
+    for (const line of numstatRaw.split("\n").filter(Boolean)) {
+      const parts = line.split("\t");
+      if (parts.length < 3) continue;
+      const [added, deleted, filePath] = parts as [string, string, string];
+      const status = statusMap.get(filePath) ?? "MODIFIED";
+      if (added === "-" || deleted === "-") {
+        lines.push(`- ${filePath} (${status}) binary`);
+      } else {
+        lines.push(`- ${filePath} (${status}) +${added}/-${deleted}`);
+      }
+    }
+
+    return lines.join("\n");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Wraps the changed files summary in <changed_files> tags.
+ * Returns empty string when there is no summary.
+ */
+export function buildChangedFilesPreamble(summary: string): string {
+  if (!summary) return "";
+  return `<changed_files>\n${sanitiseDiffContent(summary)}\n</changed_files>\n\n`;
 }
 
 /**
